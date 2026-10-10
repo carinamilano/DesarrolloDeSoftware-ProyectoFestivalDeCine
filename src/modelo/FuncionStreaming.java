@@ -25,6 +25,10 @@ public class FuncionStreaming extends Funcion {
         espectadoresConectados++;
     }
 
+    public void quitarEspectador() {
+        if (espectadoresConectados > 0) espectadoresConectados--;
+    }
+
     @Override
     public double calcularOcupacion() {
         return (double) espectadoresConectados / capacidadVirtual * 100;

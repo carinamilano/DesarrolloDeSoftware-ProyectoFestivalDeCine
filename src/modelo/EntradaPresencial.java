@@ -3,8 +3,8 @@ package modelo;
 public class EntradaPresencial extends Entrada {
     private int butaca;
 
-    public EntradaPresencial(String codigo, Funcion funcion, Espectador espectador, int butaca) {
-        super(codigo, funcion, espectador);
+    public EntradaPresencial(String codigo, Funcion funcion, Espectador espectador, int butaca, double precio, Abono abono) {
+        super(codigo, funcion, espectador, precio, abono);
         this.butaca = butaca;
     }
 

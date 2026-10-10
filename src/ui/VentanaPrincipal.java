@@ -132,7 +132,14 @@ public class VentanaPrincipal extends JFrame {
             setEstado("Gestión de espectadores");
         });
 
+        JMenuItem itemAbonos = new JMenuItem("Abonos");
+        itemAbonos.addActionListener(e -> {
+            mostrarPanel(new ui.entradas.PanelAbonos(this));
+            setEstado("Abonos del festival");
+        });
+
         menuEntradas.add(itemVentaEntradas);
+        menuEntradas.add(itemAbonos);
         menuEntradas.add(itemEspectadores);
 
         // evaluaciones
@@ -144,7 +151,14 @@ public class VentanaPrincipal extends JFrame {
             setEstado("Evaluaciones y ganadores");
         });
 
+        JMenuItem itemVotoPublico = new JMenuItem("Voto del público");
+        itemVotoPublico.addActionListener(e -> {
+            mostrarPanel(new ui.evaluaciones.PanelVotoPublico(this));
+            setEstado("Voto del público");
+        });
+
         menuEvaluaciones.add(itemEvaluaciones);
+        menuEvaluaciones.add(itemVotoPublico);
 
         // ayuda
         JMenu menuAyuda = new JMenu("Ayuda");

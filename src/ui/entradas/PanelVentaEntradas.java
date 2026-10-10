@@ -33,7 +33,7 @@ public class PanelVentaEntradas extends JPanel {
     }
 
     private void construirTabla() {
-        String[] columnas = {"Código", "Película", "Tipo", "Fecha", "Espectador", "Detalle"};
+        String[] columnas = {"Código", "Película", "Tipo", "Fecha", "Espectador", "Detalle", "Precio"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -76,13 +76,17 @@ public class PanelVentaEntradas extends JPanel {
                 tipo = "Streaming";
                 detalle = "Enlace: " + ((EntradaStreaming) entrada).getEnlaceAcceso();
             }
+            if (entrada.esReservaDeAbono()) {
+                tipo += " (abono " + entrada.getAbono().getCodigo() + ")";
+            }
             modeloTabla.addRow(new Object[]{
                     entrada.getCodigo(),
                     entrada.getFuncion().getPelicula().getTitulo(),
                     tipo,
                     entrada.getFuncion().getFecha().toString(),
                     entrada.getEspectador().getNombre(),
-                    detalle
+                    detalle,
+                    String.format("$ %.2f", entrada.getPrecio())
             });
         }
     }
@@ -116,16 +120,17 @@ public class PanelVentaEntradas extends JPanel {
                 .toArray(String[]::new);
 
         JDialog dialog = new JDialog(ventana, "Vender entrada presencial", true);
-        dialog.setSize(500, 320);
+        dialog.setSize(500, 360);
         dialog.setLocationRelativeTo(ventana);
         dialog.setLayout(new BorderLayout(10, 10));
 
-        JPanel panelCampos = new JPanel(new GridLayout(4, 2, 10, 10));
+        JPanel panelCampos = new JPanel(new GridLayout(5, 2, 10, 10));
         panelCampos.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
 
         JComboBox<String> comboEspectador = new JComboBox<>(opcionesEspectador.toArray(new String[0]));
         JComboBox<String> comboFuncion = new JComboBox<>(nombresFunciones);
         JTextField campoButaca = new JTextField();
+        JComboBox<TipoTarifa> comboTarifa = new JComboBox<>(TipoTarifa.values());
 
         JLabel labelOcupadas = new JLabel("ninguna");
         labelOcupadas.setForeground(new Color(150, 50, 50));
@@ -139,6 +144,8 @@ public class PanelVentaEntradas extends JPanel {
         panelCampos.add(labelOcupadas);
         panelCampos.add(new JLabel("Número de butaca:"));
         panelCampos.add(campoButaca);
+        panelCampos.add(new JLabel("Tarifa:"));
+        panelCampos.add(comboTarifa);
 
         // Actualizar butacas ocupadas cuando cambia la función
         comboFuncion.addActionListener(e -> {
@@ -287,9 +294,9 @@ public class PanelVentaEntradas extends JPanel {
 
             try {
                 EntradaPresencial entrada = ventana.getEntradaServicio()
-                        .venderEntradaPresencial(nombreEspectador, funcion, butaca);
+                        .venderEntradaPresencial(nombreEspectador, funcion, butaca, (TipoTarifa) comboTarifa.getSelectedItem());
                 cargarDatos();
-                ventana.setEstado("Entrada vendida: " + entrada.getCodigo());
+                ventana.setEstado("Entrada vendida: " + entrada.getCodigo() + String.format(" - Precio: $ %.2f", entrada.getPrecio()));
 
                 // Actualizar butacas ocupadas
                 List<Integer> ocupadas = funcion.getButacasOcupadas();
@@ -350,20 +357,23 @@ public class PanelVentaEntradas extends JPanel {
                 .toArray(String[]::new);
 
         JDialog dialog = new JDialog(ventana, "Vender entrada streaming", true);
-        dialog.setSize(450, 220);
+        dialog.setSize(450, 260);
         dialog.setLocationRelativeTo(ventana);
         dialog.setLayout(new BorderLayout(10, 10));
 
-        JPanel panelCampos = new JPanel(new GridLayout(2, 2, 10, 10));
+        JPanel panelCampos = new JPanel(new GridLayout(3, 2, 10, 10));
         panelCampos.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
 
         JComboBox<String> comboEspectador = new JComboBox<>(opcionesEspectador.toArray(new String[0]));
         JComboBox<String> comboFuncion = new JComboBox<>(nombresFunciones);
+        JComboBox<TipoTarifa> comboTarifaStreaming = new JComboBox<>(TipoTarifa.values());
 
         panelCampos.add(new JLabel("Espectador:"));
         panelCampos.add(comboEspectador);
         panelCampos.add(new JLabel("Función:"));
         panelCampos.add(comboFuncion);
+        panelCampos.add(new JLabel("Tarifa:"));
+        panelCampos.add(comboTarifaStreaming);
 
         JLabel labelError = new JLabel(" ");
         labelError.setForeground(Color.RED);
@@ -469,9 +479,9 @@ public class PanelVentaEntradas extends JPanel {
                 int indiceFuncion = comboFuncion.getSelectedIndex();
                 FuncionStreaming funcion = funcionesStreaming.get(indiceFuncion);
                 EntradaStreaming entrada = ventana.getEntradaServicio()
-                        .venderEntradaStreaming(nombreEspectador, funcion);
+                        .venderEntradaStreaming(nombreEspectador, funcion, (TipoTarifa) comboTarifaStreaming.getSelectedItem());
                 cargarDatos();
-                ventana.setEstado("Entrada streaming vendida: " + entrada.getCodigo());
+                ventana.setEstado("Entrada streaming vendida: " + entrada.getCodigo() + String.format(" - Precio: $ %.2f", entrada.getPrecio()));
                 dialog.dispose();
             } catch (Exception ex) {
                 labelError.setText("Error: " + ex.getMessage());

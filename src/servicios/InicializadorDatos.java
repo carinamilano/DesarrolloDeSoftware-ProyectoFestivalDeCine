@@ -24,6 +24,8 @@ public class InicializadorDatos {
         inicializarReparto();
         inicializarFunciones();
         inicializarEntradas();
+        inicializarAbonos();
+        inicializarVotosPublico();
     }
 
     private void inicializarEdiciones() {
@@ -277,5 +279,76 @@ public class InicializadorDatos {
         entradaServicio.venderEntradaStreaming("Matias Ramirez", laLaLand18);
         entradaServicio.venderEntradaStreaming("Ana Lopez", laLaLand18);
         entradaServicio.venderEntradaStreaming("Carlos Garcia", laLaLand18);
+    }
+
+    private void inicializarAbonos() {
+        if (!entradaServicio.getAbonos().isEmpty()) return;
+        if (entradaServicio.getFunciones().isEmpty()) return;
+        if (entradaServicio.getEspectadores().isEmpty()) return;
+
+        // Abono Full con tarifa de estudiante
+        Abono full = entradaServicio.comprarAbonoFull("Ana Lopez", TipoTarifa.ESTUDIANTE);
+        entradaServicio.reservarPresencialConAbono(full.getCodigo(),
+                buscarFuncionPresencial("Roma", fechaBase.plusDays(8), LocalTime.of(21, 0)), 10);
+        entradaServicio.reservarPresencialConAbono(full.getCodigo(),
+                buscarFuncionPresencial("Oppenheimer", fechaBase.plusDays(10), LocalTime.of(19, 0)), 10);
+
+        // Abono 3 dias
+        Abono tresDias = entradaServicio.comprarAbonoTresDias("Carlos Garcia", TipoTarifa.GENERAL,
+                java.util.List.of(fechaBase.plusDays(7), fechaBase.plusDays(8), fechaBase.plusDays(9)));
+        entradaServicio.reservarPresencialConAbono(tresDias.getCodigo(),
+                buscarFuncionPresencial("The Irishman", fechaBase.plusDays(7), LocalTime.of(20, 0)), 10);
+        entradaServicio.reservarPresencialConAbono(tresDias.getCodigo(),
+                buscarFuncionPresencial("Roma", fechaBase.plusDays(8), LocalTime.of(16, 0)), 10);
+        entradaServicio.reservarPresencialConAbono(tresDias.getCodigo(),
+                buscarFuncionPresencial("Tar", fechaBase.plusDays(9), LocalTime.of(21, 0)), 10);
+
+        // Abono Streaming con tarifa de jubilado
+        Abono streaming = entradaServicio.comprarAbonoStreaming("Valentina Torres", TipoTarifa.JUBILADO);
+        entradaServicio.reservarStreamingConAbono(streaming.getCodigo(),
+                (FuncionStreaming) buscarFuncion("Dune", fechaBase.plusDays(15), LocalTime.of(21, 0)));
+    }
+
+    private void inicializarVotosPublico() {
+        if (!peliculaServicio.getVotosPublico().isEmpty()) return;
+        if (entradaServicio.getEntradas().isEmpty()) return;
+
+        votar("Ana Lopez", "The Irishman", 4);
+        votar("Carlos Garcia", "The Irishman", 5);
+        votar("Maria Perez", "The Irishman", 4);
+        votar("Diego Fernandez", "Roma", 5);
+        votar("Sofia Gonzalez", "Roma", 5);
+        votar("Pablo Sanchez", "Roma", 4);
+        votar("Valentina Torres", "Tar", 3);
+        votar("Matias Ramirez", "Tar", 4);
+        votar("Maria Perez", "Oppenheimer", 5);
+        votar("Juan Rodriguez", "Oppenheimer", 4);
+        votar("Laura Martinez", "Oppenheimer", 5);
+        votar("Valentina Torres", "Parasite", 5);
+        votar("Carlos Garcia", "Parasite", 4);
+        votar("Diego Fernandez", "Volver", 3);
+        votar("Ana Lopez", "Barbie", 4);
+        votar("Carlos Garcia", "Barbie", 3);
+        votar("Diego Fernandez", "Dune", 5);
+        votar("Sofia Gonzalez", "Dune", 4);
+    }
+
+    private void votar(String nombreEspectador, String tituloPelicula, int puntaje) {
+        Espectador espectador = entradaServicio.buscarEspectador(nombreEspectador);
+        peliculaServicio.registrarVotoPublico(espectador, tituloPelicula, puntaje);
+    }
+
+    private FuncionPresencial buscarFuncionPresencial(String titulo, LocalDate fecha, LocalTime horario) {
+        return (FuncionPresencial) buscarFuncion(titulo, fecha, horario);
+    }
+
+    private Funcion buscarFuncion(String titulo, LocalDate fecha, LocalTime horario) {
+        for (Funcion f : entradaServicio.getFunciones()) {
+            if (f.getPelicula().getTitulo().equalsIgnoreCase(titulo)
+                    && f.getFecha().equals(fecha) && f.getHorario().equals(horario)) {
+                return f;
+            }
+        }
+        throw new excepciones.EntidadNoEncontradaException("Funcion", titulo + " " + fecha + " " + horario);
     }
 }

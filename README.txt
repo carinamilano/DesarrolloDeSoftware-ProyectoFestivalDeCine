@@ -200,3 +200,53 @@ El método calcularOcupacion() se comporta de manera diferente en
 cada subclase, demostrando polimorfismo.
 
 ========================================================
+
+NUEVAS FUNCIONALIDADES - ABONOS Y VOTO DEL PÚBLICO
+--------------------------------------------------
+1) Abonos del festival y precios (menú Entradas > Abonos)
+
+  Precios:
+    Las entradas y los abonos ahora tienen precio. Al vender se elige
+    una tarifa (enum TipoTarifa):
+      GENERAL (sin descuento), ESTUDIANTE (30%), JUBILADO (40%)
+    Las entradas sueltas compradas con 7 días o más de anticipación
+    tienen un 10% adicional de descuento.
+
+    Precios base:  entrada presencial $8000 | entrada streaming $5000
+                   abono 3 días $20000 | abono full $45000
+                   abono streaming $25000
+
+  Tipos de abono (Abono abstract):
+    - AbonoTresDias   → el espectador elige 3 días con funciones
+                        presenciales y puede ver todo lo que quiera
+                        esos días.
+    - AbonoFull       → todas las funciones presenciales del festival.
+    - AbonoStreaming  → todas las funciones streaming.
+    Cada subclase redefine cubre(Funcion), que indica si el abono
+    permite entrar a una función (polimorfismo).
+
+  Reservas con abono:
+    Con un abono se reserva lugar en una función sin volver a pagar.
+    La reserva es una Entrada con precio 0 asociada al abono.
+    Validaciones: el abono debe cubrir la función, la función no puede
+    haber pasado, no puede haber dos reservas a la misma fecha y hora,
+    y se validan butaca y capacidad como en la venta normal.
+    Las reservas se pueden cancelar (se libera la butaca o el lugar
+    virtual). Las entradas sueltas no se cancelan.
+
+2) Voto del público (menú Evaluaciones > Voto del público)
+
+  - Un espectador puede votar de 1 a 5 estrellas una película para la
+    que tiene entrada (comprada o reservada con abono).
+  - Cada espectador vota una sola vez cada película.
+  - Premio del Público: por cada edición, la película (de sus
+    secciones) con mejor promedio de votos del público. Se calcula en
+    Edicion.determinarGanadoraPublico(), aparte del premio del jurado.
+
+  Nuevas clases: TipoTarifa, Abono, AbonoTresDias, AbonoFull,
+  AbonoStreaming, VotoPublico, AbonoInvalidoException,
+  VotoInvalidoException, PanelAbonos, PanelVotoPublico.
+
+  Igual que las funciones y las entradas, los abonos y los votos no se
+  persisten en archivo: se precargan con InicializadorDatos (3 abonos
+  con reservas y 18 votos del público).

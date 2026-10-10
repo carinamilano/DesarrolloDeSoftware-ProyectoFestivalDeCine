@@ -2,6 +2,7 @@ package servicios;
 
 import modelo.*;
 import excepciones.EntidadNoEncontradaException;
+import excepciones.VotoInvalidoException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ public class PeliculaServicio {
     private List<Actor> actores;
     private List<Jurado> jurados;
     private List<Evaluacion> evaluaciones;
+    private List<VotoPublico> votosPublico;
 
     public PeliculaServicio() {
         this.peliculas = new ArrayList<>();
@@ -19,6 +21,7 @@ public class PeliculaServicio {
         this.actores = new ArrayList<>();
         this.jurados = new ArrayList<>();
         this.evaluaciones = new ArrayList<>();
+        this.votosPublico = new ArrayList<>();
     }
 
     public void registrarDirector(String nombre, String email, String nacionalidad) {
@@ -62,6 +65,27 @@ public class PeliculaServicio {
         evaluaciones.add(e);
     }
 
+    // El público vota de 1 a 5 estrellas. Solo puede votar quien tenga entrada para la película, una vez.
+    public void registrarVotoPublico(Espectador espectador, String tituloPelicula, int puntaje) {
+        Pelicula pelicula = buscarPelicula(tituloPelicula);
+        if (puntaje < 1 || puntaje > 5) {
+            throw new VotoInvalidoException("el puntaje debe estar entre 1 y 5.");
+        }
+        if (!espectador.tieneEntradaPara(pelicula)) {
+            throw new VotoInvalidoException(espectador.getNombre() + " no tiene entrada para " + pelicula.getTitulo() + ".");
+        }
+        if (pelicula.fueVotadaPor(espectador)) {
+            throw new VotoInvalidoException(espectador.getNombre() + " ya votó " + pelicula.getTitulo() + ".");
+        }
+        VotoPublico voto = new VotoPublico(puntaje, pelicula, espectador);
+        pelicula.agregarVotoPublico(voto);
+        votosPublico.add(voto);
+    }
+
+    public Pelicula determinarGanadoraPublico(Edicion edicion) {
+        return edicion.determinarGanadoraPublico();
+    }
+
     public Pelicula determinarGanadora(Seccion seccion) {
         return seccion.determinarGanadora();
     }
@@ -99,4 +123,5 @@ public class PeliculaServicio {
     public List<Actor> getActores() { return actores; }
     public List<Jurado> getJurados() { return jurados; }
     public List<Evaluacion> getEvaluaciones() { return evaluaciones; }
+    public List<VotoPublico> getVotosPublico() { return votosPublico; }
 }

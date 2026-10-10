@@ -24,6 +24,10 @@ public class FuncionPresencial extends Funcion {
         butacasOcupadas.add(numeroButaca);
     }
 
+    public void liberarButaca(int numeroButaca) {
+        butacasOcupadas.remove(Integer.valueOf(numeroButaca));
+    }
+
     public boolean butacaDisponible(int numeroButaca) {
         return !butacasOcupadas.contains(numeroButaca);
     }

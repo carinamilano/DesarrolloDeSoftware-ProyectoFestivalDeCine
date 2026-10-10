@@ -11,6 +11,7 @@ public class Pelicula {
     private List<Actor> actores;
     private List<Evaluacion> evaluaciones;
     private List<Funcion> funciones;
+    private List<VotoPublico> votosPublico;
 
     public Pelicula(String titulo, String genero, int duracion, Director director) {
         this.titulo = titulo;
@@ -20,6 +21,7 @@ public class Pelicula {
         this.actores = new ArrayList<>();
         this.evaluaciones = new ArrayList<>();
         this.funciones = new ArrayList<>();
+        this.votosPublico = new ArrayList<>();
     }
 
     public void agregarActor(Actor a) {
@@ -32,6 +34,26 @@ public class Pelicula {
 
     public void agregarFuncion(Funcion f) {
         funciones.add(f);
+    }
+
+    public void agregarVotoPublico(VotoPublico v) {
+        votosPublico.add(v);
+    }
+
+    public boolean fueVotadaPor(Espectador espectador) {
+        for (VotoPublico v : votosPublico) {
+            if (v.getEspectador() == espectador) return true;
+        }
+        return false;
+    }
+
+    public double calcularPromedioPublico() {
+        if (votosPublico.isEmpty()) return 0;
+        double suma = 0;
+        for (VotoPublico v : votosPublico) {
+            suma += v.getPuntaje();
+        }
+        return suma / votosPublico.size();
     }
 
     public double calcularPromedio() {
@@ -63,6 +85,9 @@ public class Pelicula {
     }
     public List<Funcion> getFunciones() {
         return funciones;
+    }
+    public List<VotoPublico> getVotosPublico() {
+        return votosPublico;
     }
 
     @Override

@@ -30,6 +30,20 @@ public class Edicion {
         return null;
     }
 
+    // Premio del Público: la película de la edición con mejor promedio de votos del público
+    public Pelicula determinarGanadoraPublico() {
+        Pelicula ganadora = null;
+        for (Seccion s : secciones) {
+            for (Pelicula p : s.getPeliculas()) {
+                if (p.getVotosPublico().isEmpty()) continue;
+                if (ganadora == null || p.calcularPromedioPublico() > ganadora.calcularPromedioPublico()) {
+                    ganadora = p;
+                }
+            }
+        }
+        return ganadora;
+    }
+
     public int getAnio() {
         return anio;
     }
