@@ -160,15 +160,18 @@ public class PanelAbonos extends JPanel {
     // ========== COMPRAR ABONO ==========
 
     private void comprarAbono() {
-        List<Espectador> espectadores = ventana.getEntradaServicio().getEspectadores();
-        if (espectadores.isEmpty()) {
-            JOptionPane.showMessageDialog(ventana,
-                    "No hay espectadores registrados. Registre uno desde Entradas > Espectadores.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
+        // Si no hay espectadores, se ofrece darlo de alta en el momento
+        if (ventana.getEntradaServicio().getEspectadores().isEmpty()) {
+            int opcion = JOptionPane.showConfirmDialog(ventana,
+                    "No hay espectadores registrados. ¿Desea dar de alta uno ahora?",
+                    "Comprar abono", JOptionPane.YES_NO_OPTION);
+            if (opcion != JOptionPane.YES_OPTION
+                    || PanelEspectadores.mostrarDialogoAlta(ventana) == null) {
+                return;
+            }
         }
 
-        String[] nombresEspectadores = espectadores.stream()
+        String[] nombresEspectadores = ventana.getEntradaServicio().getEspectadores().stream()
                 .map(Espectador::getNombre).toArray(String[]::new);
         List<LocalDate> fechas = ventana.getEntradaServicio().getFechasConFuncionesPresenciales();
 
@@ -186,8 +189,22 @@ public class PanelAbonos extends JPanel {
         JLabel labelPrecio = new JLabel();
         labelPrecio.setFont(new Font("SansSerif", Font.BOLD, 13));
 
+        // Botón para dar de alta un espectador sin salir de la compra
+        JButton btnNuevoEspectador = new JButton("Nuevo...");
+        btnNuevoEspectador.setToolTipText("Dar de alta un espectador nuevo");
+        btnNuevoEspectador.addActionListener(e -> {
+            String nuevo = PanelEspectadores.mostrarDialogoAlta(ventana);
+            if (nuevo != null) {
+                comboEspectador.addItem(nuevo);
+                comboEspectador.setSelectedItem(nuevo);
+            }
+        });
+        JPanel panelEspectador = new JPanel(new BorderLayout(5, 0));
+        panelEspectador.add(comboEspectador, BorderLayout.CENTER);
+        panelEspectador.add(btnNuevoEspectador, BorderLayout.EAST);
+
         panelCampos.add(new JLabel("Espectador:"));
-        panelCampos.add(comboEspectador);
+        panelCampos.add(panelEspectador);
         panelCampos.add(new JLabel("Tipo de abono:"));
         panelCampos.add(comboTipo);
         panelCampos.add(new JLabel("Tarifa:"));

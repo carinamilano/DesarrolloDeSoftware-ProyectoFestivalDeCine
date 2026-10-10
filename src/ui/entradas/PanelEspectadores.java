@@ -106,6 +106,18 @@ public class PanelEspectadores extends JPanel {
     }
 
     private void agregarEspectador() {
+        if (mostrarDialogoAlta(ventana) != null) {
+            cargarDatos();
+        }
+    }
+
+    /**
+     * Muestra el diálogo de alta de espectador. Se reutiliza desde otras pantallas
+     * (por ejemplo, la compra de abonos). Devuelve el nombre del espectador
+     * registrado, o null si se canceló.
+     */
+    public static String mostrarDialogoAlta(VentanaPrincipal ventana) {
+        String[] registrado = {null};
         JDialog dialog = new JDialog(ventana, "Agregar espectador", true);
         dialog.setSize(400, 250);
         dialog.setLocationRelativeTo(ventana);
@@ -168,7 +180,7 @@ public class PanelEspectadores extends JPanel {
 
             try {
                 ventana.getEntradaServicio().registrarEspectador(nombre, email, nacionalidad);
-                cargarDatos();
+                registrado[0] = nombre;
                 ventana.setEstado("Espectador agregado: " + nombre);
                 dialog.dispose();
             } catch (Exception ex) {
@@ -179,5 +191,6 @@ public class PanelEspectadores extends JPanel {
         dialog.add(panelCampos, BorderLayout.CENTER);
         dialog.add(panelSur, BorderLayout.SOUTH);
         dialog.setVisible(true);
+        return registrado[0];
     }
 }
