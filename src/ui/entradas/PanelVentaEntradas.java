@@ -92,7 +92,6 @@ public class PanelVentaEntradas extends JPanel {
     }
 
     private void venderEntradaPresencial() {
-        List<Espectador> espectadores = ventana.getEntradaServicio().getEspectadores();
         List<Funcion> funciones = ventana.getEntradaServicio().getFunciones();
 
         List<FuncionPresencial> funcionesPresenciales = new java.util.ArrayList<>();
@@ -108,12 +107,7 @@ public class PanelVentaEntradas extends JPanel {
                     "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        java.util.List<String> opcionesEspectador = new java.util.ArrayList<>();
-        opcionesEspectador.add("-- Nuevo espectador --");
-        for (Espectador e : espectadores) {
-            opcionesEspectador.add(e.getNombre());
-        }
+        if (!PanelEspectadores.asegurarEspectadores(ventana, "Vender entrada presencial")) return;
 
         String[] nombresFunciones = funcionesPresenciales.stream()
                 .map(f -> f.getPelicula().getTitulo() + " — " + f.getFecha() + " " + f.getHorario() + " — " + f.getSala().getNombre() + " (" + f.getSala().getCantidadButacas() + " butacas)")
@@ -127,7 +121,7 @@ public class PanelVentaEntradas extends JPanel {
         JPanel panelCampos = new JPanel(new GridLayout(5, 2, 10, 10));
         panelCampos.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
 
-        JComboBox<String> comboEspectador = new JComboBox<>(opcionesEspectador.toArray(new String[0]));
+        JComboBox<String> comboEspectador = new JComboBox<>();
         JComboBox<String> comboFuncion = new JComboBox<>(nombresFunciones);
         JTextField campoButaca = new JTextField();
         JComboBox<TipoTarifa> comboTarifa = new JComboBox<>(TipoTarifa.values());
@@ -137,7 +131,7 @@ public class PanelVentaEntradas extends JPanel {
         labelOcupadas.setFont(new Font("SansSerif", Font.ITALIC, 12));
 
         panelCampos.add(new JLabel("Espectador:"));
-        panelCampos.add(comboEspectador);
+        panelCampos.add(PanelEspectadores.crearSelectorEspectador(ventana, comboEspectador));
         panelCampos.add(new JLabel("Función:"));
         panelCampos.add(comboFuncion);
         panelCampos.add(new JLabel("Butacas ocupadas:"));
@@ -180,87 +174,7 @@ public class PanelVentaEntradas extends JPanel {
         btnCancelar.addActionListener(e -> dialog.dispose());
 
         btnAceptar.addActionListener(e -> {
-            int indiceEspectador = comboEspectador.getSelectedIndex();
-            String nombreEspectador;
-
-            if (indiceEspectador == 0) {
-                JTextField campoNombre = new JTextField();
-                JTextField campoEmail = new JTextField();
-                JTextField campoNacionalidad = new JTextField();
-
-                JDialog dialogNuevo = new JDialog(dialog, "Nuevo espectador", true);
-                dialogNuevo.setSize(380, 230);
-                dialogNuevo.setLocationRelativeTo(dialog);
-                dialogNuevo.setLayout(new BorderLayout(10, 10));
-
-                JPanel panelNuevo = new JPanel(new GridLayout(3, 2, 10, 10));
-                panelNuevo.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
-                panelNuevo.add(new JLabel("Nombre:"));
-                panelNuevo.add(campoNombre);
-                panelNuevo.add(new JLabel("Email:"));
-                panelNuevo.add(campoEmail);
-                panelNuevo.add(new JLabel("Nacionalidad:"));
-                panelNuevo.add(campoNacionalidad);
-
-                JLabel labelErrorNuevo = new JLabel(" ");
-                labelErrorNuevo.setForeground(Color.RED);
-                labelErrorNuevo.setFont(new Font("SansSerif", Font.PLAIN, 12));
-                labelErrorNuevo.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
-
-                JPanel panelBotonesNuevo = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-                JButton btnOk = new JButton("Aceptar");
-                JButton btnCancelarNuevo = new JButton("Cancelar");
-                panelBotonesNuevo.add(btnOk);
-                panelBotonesNuevo.add(btnCancelarNuevo);
-
-                JPanel panelSurNuevo = new JPanel(new BorderLayout());
-                panelSurNuevo.add(labelErrorNuevo, BorderLayout.CENTER);
-                panelSurNuevo.add(panelBotonesNuevo, BorderLayout.SOUTH);
-
-                campoNombre.addActionListener(ev -> campoEmail.requestFocus());
-                campoEmail.addActionListener(ev -> campoNacionalidad.requestFocus());
-                campoNacionalidad.addActionListener(ev -> btnOk.doClick());
-                btnCancelarNuevo.addActionListener(ev -> dialogNuevo.dispose());
-
-                final String[] nombreFinal = {null};
-
-                btnOk.addActionListener(ev -> {
-                    String nombre = campoNombre.getText().trim();
-                    String email = campoEmail.getText().trim();
-                    String nacionalidad = campoNacionalidad.getText().trim();
-
-                    if (nombre.isEmpty()) {
-                        labelErrorNuevo.setText("El nombre es obligatorio.");
-                        campoNombre.requestFocus();
-                        return;
-                    }
-                    if (email.isEmpty()) {
-                        labelErrorNuevo.setText("El email es obligatorio.");
-                        campoEmail.requestFocus();
-                        return;
-                    }
-                    if (nacionalidad.isEmpty()) {
-                        labelErrorNuevo.setText("La nacionalidad es obligatoria.");
-                        campoNacionalidad.requestFocus();
-                        return;
-                    }
-
-                    ventana.getEntradaServicio().registrarEspectador(nombre, email, nacionalidad);
-                    comboEspectador.addItem(nombre);
-                    comboEspectador.setSelectedItem(nombre);
-                    nombreFinal[0] = nombre;
-                    dialogNuevo.dispose();
-                });
-
-                dialogNuevo.add(panelNuevo, BorderLayout.CENTER);
-                dialogNuevo.add(panelSurNuevo, BorderLayout.SOUTH);
-                dialogNuevo.setVisible(true);
-
-                if (nombreFinal[0] == null) return;
-                nombreEspectador = nombreFinal[0];
-            } else {
-                nombreEspectador = (String) comboEspectador.getSelectedItem();
-            }
+            String nombreEspectador = (String) comboEspectador.getSelectedItem();
 
             String butacaStr = campoButaca.getText().trim();
             if (butacaStr.isEmpty()) {
@@ -329,7 +243,6 @@ public class PanelVentaEntradas extends JPanel {
     }
 
     private void venderEntradaStreaming() {
-        List<Espectador> espectadores = ventana.getEntradaServicio().getEspectadores();
         List<Funcion> funciones = ventana.getEntradaServicio().getFunciones();
 
         List<FuncionStreaming> funcionesStreaming = new java.util.ArrayList<>();
@@ -345,12 +258,7 @@ public class PanelVentaEntradas extends JPanel {
                     "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        java.util.List<String> opcionesEspectador = new java.util.ArrayList<>();
-        opcionesEspectador.add("-- Nuevo espectador --");
-        for (Espectador e : espectadores) {
-            opcionesEspectador.add(e.getNombre());
-        }
+        if (!PanelEspectadores.asegurarEspectadores(ventana, "Vender entrada streaming")) return;
 
         String[] nombresFunciones = funcionesStreaming.stream()
                 .map(f -> f.getPelicula().getTitulo() + " — " + f.getFecha() + " " + f.getHorario())
@@ -364,12 +272,12 @@ public class PanelVentaEntradas extends JPanel {
         JPanel panelCampos = new JPanel(new GridLayout(3, 2, 10, 10));
         panelCampos.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
 
-        JComboBox<String> comboEspectador = new JComboBox<>(opcionesEspectador.toArray(new String[0]));
+        JComboBox<String> comboEspectador = new JComboBox<>();
         JComboBox<String> comboFuncion = new JComboBox<>(nombresFunciones);
         JComboBox<TipoTarifa> comboTarifaStreaming = new JComboBox<>(TipoTarifa.values());
 
         panelCampos.add(new JLabel("Espectador:"));
-        panelCampos.add(comboEspectador);
+        panelCampos.add(PanelEspectadores.crearSelectorEspectador(ventana, comboEspectador));
         panelCampos.add(new JLabel("Función:"));
         panelCampos.add(comboFuncion);
         panelCampos.add(new JLabel("Tarifa:"));
@@ -393,87 +301,7 @@ public class PanelVentaEntradas extends JPanel {
         btnCancelar.addActionListener(e -> dialog.dispose());
 
         btnAceptar.addActionListener(e -> {
-            int indiceEspectador = comboEspectador.getSelectedIndex();
-            String nombreEspectador;
-
-            if (indiceEspectador == 0) {
-                JTextField campoNombre = new JTextField();
-                JTextField campoEmail = new JTextField();
-                JTextField campoNacionalidad = new JTextField();
-
-                JDialog dialogNuevo = new JDialog(dialog, "Nuevo espectador", true);
-                dialogNuevo.setSize(380, 230);
-                dialogNuevo.setLocationRelativeTo(dialog);
-                dialogNuevo.setLayout(new BorderLayout(10, 10));
-
-                JPanel panelNuevo = new JPanel(new GridLayout(3, 2, 10, 10));
-                panelNuevo.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
-                panelNuevo.add(new JLabel("Nombre:"));
-                panelNuevo.add(campoNombre);
-                panelNuevo.add(new JLabel("Email:"));
-                panelNuevo.add(campoEmail);
-                panelNuevo.add(new JLabel("Nacionalidad:"));
-                panelNuevo.add(campoNacionalidad);
-
-                JLabel labelErrorNuevo = new JLabel(" ");
-                labelErrorNuevo.setForeground(Color.RED);
-                labelErrorNuevo.setFont(new Font("SansSerif", Font.PLAIN, 12));
-                labelErrorNuevo.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
-
-                JPanel panelBotonesNuevo = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-                JButton btnOk = new JButton("Aceptar");
-                JButton btnCancelarNuevo = new JButton("Cancelar");
-                panelBotonesNuevo.add(btnOk);
-                panelBotonesNuevo.add(btnCancelarNuevo);
-
-                JPanel panelSurNuevo = new JPanel(new BorderLayout());
-                panelSurNuevo.add(labelErrorNuevo, BorderLayout.CENTER);
-                panelSurNuevo.add(panelBotonesNuevo, BorderLayout.SOUTH);
-
-                campoNombre.addActionListener(ev -> campoEmail.requestFocus());
-                campoEmail.addActionListener(ev -> campoNacionalidad.requestFocus());
-                campoNacionalidad.addActionListener(ev -> btnOk.doClick());
-                btnCancelarNuevo.addActionListener(ev -> dialogNuevo.dispose());
-
-                final String[] nombreFinal = {null};
-
-                btnOk.addActionListener(ev -> {
-                    String nombre = campoNombre.getText().trim();
-                    String email = campoEmail.getText().trim();
-                    String nacionalidad = campoNacionalidad.getText().trim();
-
-                    if (nombre.isEmpty()) {
-                        labelErrorNuevo.setText("El nombre es obligatorio.");
-                        campoNombre.requestFocus();
-                        return;
-                    }
-                    if (email.isEmpty()) {
-                        labelErrorNuevo.setText("El email es obligatorio.");
-                        campoEmail.requestFocus();
-                        return;
-                    }
-                    if (nacionalidad.isEmpty()) {
-                        labelErrorNuevo.setText("La nacionalidad es obligatoria.");
-                        campoNacionalidad.requestFocus();
-                        return;
-                    }
-
-                    ventana.getEntradaServicio().registrarEspectador(nombre, email, nacionalidad);
-                    comboEspectador.addItem(nombre);
-                    comboEspectador.setSelectedItem(nombre);
-                    nombreFinal[0] = nombre;
-                    dialogNuevo.dispose();
-                });
-
-                dialogNuevo.add(panelNuevo, BorderLayout.CENTER);
-                dialogNuevo.add(panelSurNuevo, BorderLayout.SOUTH);
-                dialogNuevo.setVisible(true);
-
-                if (nombreFinal[0] == null) return;
-                nombreEspectador = nombreFinal[0];
-            } else {
-                nombreEspectador = (String) comboEspectador.getSelectedItem();
-            }
+            String nombreEspectador = (String) comboEspectador.getSelectedItem();
 
             try {
                 int indiceFuncion = comboFuncion.getSelectedIndex();

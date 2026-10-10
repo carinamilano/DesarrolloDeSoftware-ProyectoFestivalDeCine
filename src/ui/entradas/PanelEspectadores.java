@@ -112,6 +112,41 @@ public class PanelEspectadores extends JPanel {
     }
 
     /**
+     * Si no hay espectadores registrados, ofrece dar de alta uno en el momento.
+     * Devuelve true si hay al menos un espectador para continuar con la venta.
+     */
+    public static boolean asegurarEspectadores(VentanaPrincipal ventana, String titulo) {
+        if (!ventana.getEntradaServicio().getEspectadores().isEmpty()) return true;
+        int opcion = JOptionPane.showConfirmDialog(ventana,
+                "No hay espectadores registrados. ¿Desea dar de alta uno ahora?",
+                titulo, JOptionPane.YES_NO_OPTION);
+        return opcion == JOptionPane.YES_OPTION && mostrarDialogoAlta(ventana) != null;
+    }
+
+    /**
+     * Arma el combo de espectadores junto a un botón "Nuevo..." que permite
+     * dar de alta un espectador sin salir de la pantalla de venta.
+     */
+    public static JPanel crearSelectorEspectador(VentanaPrincipal ventana, JComboBox<String> combo) {
+        for (Espectador e : ventana.getEntradaServicio().getEspectadores()) {
+            combo.addItem(e.getNombre());
+        }
+        JButton btnNuevo = new JButton("Nuevo...");
+        btnNuevo.setToolTipText("Dar de alta un espectador nuevo");
+        btnNuevo.addActionListener(e -> {
+            String nuevo = mostrarDialogoAlta(ventana);
+            if (nuevo != null) {
+                combo.addItem(nuevo);
+                combo.setSelectedItem(nuevo);
+            }
+        });
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        panel.add(combo, BorderLayout.CENTER);
+        panel.add(btnNuevo, BorderLayout.EAST);
+        return panel;
+    }
+
+    /**
      * Muestra el diálogo de alta de espectador. Se reutiliza desde otras pantallas
      * (por ejemplo, la compra de abonos). Devuelve el nombre del espectador
      * registrado, o null si se canceló.
