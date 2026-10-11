@@ -72,6 +72,12 @@ public class VentanaPrincipal extends JFrame {
             setEstado("Gestión de ediciones");
         });
 
+        JMenuItem itemSecciones = new JMenuItem("Secciones");
+        itemSecciones.addActionListener(e -> {
+            mostrarPanel(new ui.festival.PanelSecciones(this));
+            setEstado("Gestión de secciones");
+        });
+
         JMenuItem itemSalas = new JMenuItem("Salas");
         itemSalas.addActionListener(e -> {
             mostrarPanel(new ui.festival.PanelSalas(this));
@@ -79,6 +85,7 @@ public class VentanaPrincipal extends JFrame {
         });
 
         menuFestival.add(itemEdiciones);
+        menuFestival.add(itemSecciones);
         menuFestival.add(itemSalas);
 
         // peliculas

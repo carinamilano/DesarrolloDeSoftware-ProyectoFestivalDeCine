@@ -24,3 +24,20 @@ Fernando Castro,Roma,9.2
 Fernando Castro,Barbie,7.5
 Pedro Martinez,Roma,10.0
 Fernando Castro,Volver,9.0
+Pedro Martinez,Dolor y gloria,8.7
+Laura Gomez,Dolor y gloria,9.1
+Claudia Reyes,Dolor y gloria,8.4
+Roberto Silva,Moonrise Kingdom,8.0
+Fernando Castro,Moonrise Kingdom,7.6
+Pedro Martinez,Whiplash,9.3
+Claudia Reyes,Whiplash,9.0
+Laura Gomez,Lady Bird,8.2
+Fernando Castro,Lady Bird,8.6
+Pedro Martinez,Interstellar,9.4
+Roberto Silva,Interstellar,9.1
+Laura Gomez,Interstellar,8.9
+Claudia Reyes,Gravity,8.3
+Fernando Castro,Gravity,8.0
+Roberto Silva,Arrival,8.8
+Laura Gomez,Arrival,9.2
+Pedro Martinez,Arrival,8.5

@@ -228,10 +228,14 @@ public class PanelPeliculas extends JPanel {
                 JOptionPane.WARNING_MESSAGE);
 
         if (confirmacion == JOptionPane.YES_OPTION) {
-            ventana.getPeliculaServicio().getPeliculas()
-                    .removeIf(p -> p.getTitulo().equalsIgnoreCase(titulo));
-            cargarDatos();
-            ventana.setEstado("Película eliminada: " + titulo);
+            try {
+                ventana.getPeliculaServicio().eliminarPelicula(titulo, ventana.getFestivalServicio().getEdiciones());
+                cargarDatos();
+                ventana.setEstado("Película eliminada: " + titulo);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(ventana, ex.getMessage(),
+                        "No se puede eliminar", JOptionPane.WARNING_MESSAGE);
+            }
         }
     }
 }

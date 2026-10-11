@@ -8,4 +8,4 @@ Greta Gerwig,greta@cine.com,Americana
 Wes Anderson,wes@cine.com,Americana
 Denis Villeneuve,denis@cine.com,Canadiense
 Damien Chazelle,damien@cine.com,Americana
-Steven Spilgberg,spilgber@director.com,Americana
+Steven Spielberg,spilgber@director.com,Americana

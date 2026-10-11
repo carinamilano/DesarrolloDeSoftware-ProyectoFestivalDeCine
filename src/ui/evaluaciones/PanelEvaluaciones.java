@@ -176,12 +176,6 @@ public class PanelEvaluaciones extends JPanel {
                 return;
             }
 
-            if (puntaje < 0 || puntaje > 10) {
-                labelError.setText("El puntaje debe estar entre 0 y 10.");
-                campoPuntaje.requestFocus();
-                return;
-            }
-
             // Si eligió "-- Nuevo jurado --", pedimos los datos
             String nombreJuradoFinal = nombreJuradoSeleccionado;
             if (NUEVO_JURADO.equals(nombreJuradoSeleccionado)) {
@@ -277,9 +271,7 @@ public class PanelEvaluaciones extends JPanel {
             }
 
             try {
-                ventana.getPeliculaServicio().agregarJurado(
-                        new modelo.Jurado(nombre, email, nacionalidad)
-                );
+                ventana.getPeliculaServicio().registrarJurado(nombre, email, nacionalidad);
                 resultado[0] = nombre;
                 dialogJurado.dispose();
             } catch (Exception ex) {

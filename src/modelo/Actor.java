@@ -15,6 +15,10 @@ public class Actor extends Persona {
         peliculas.add(p);
     }
 
+    public void quitarPelicula(Pelicula p) {
+        peliculas.remove(p);
+    }
+
     public List<Pelicula> getPeliculas() {
         return peliculas;
     }

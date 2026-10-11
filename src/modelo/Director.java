@@ -15,6 +15,10 @@ public class Director extends Persona {
         peliculasDirigidas.add(p);
     }
 
+    public void quitarPelicula(Pelicula p) {
+        peliculasDirigidas.remove(p);
+    }
+
     public List<Pelicula> getPeliculasDirigidas() {
         return peliculasDirigidas; }
 

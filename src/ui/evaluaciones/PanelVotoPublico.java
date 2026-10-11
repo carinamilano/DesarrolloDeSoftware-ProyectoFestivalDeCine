@@ -40,7 +40,7 @@ public class PanelVotoPublico extends JPanel {
         splitPane.setDividerLocation(450);
 
         // --- Tabla de películas con sus votos (izquierda) ---
-        String[] columnas = {"Película", "Votos", "Promedio (1-5)"};
+        String[] columnas = {"Película", "Edición", "Votos", "Promedio (1-5)"};
         modeloVotos = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -84,8 +84,10 @@ public class PanelVotoPublico extends JPanel {
         modeloVotos.setRowCount(0);
         for (Pelicula p : ventana.getPeliculaServicio().getPeliculas()) {
             int cantidad = p.getVotosPublico().size();
+            Edicion edicion = ventana.getFestivalServicio().buscarEdicionDePelicula(p);
             modeloVotos.addRow(new Object[]{
                     p.getTitulo(),
+                    edicion == null ? "-" : edicion.getAnio() + " - " + edicion.getCiudad(),
                     cantidad,
                     cantidad == 0 ? "-" : String.format("%.2f", p.calcularPromedioPublico())
             });
@@ -101,21 +103,35 @@ public class PanelVotoPublico extends JPanel {
             return;
         }
 
+        List<Edicion> ediciones = ventana.getFestivalServicio().getEdiciones();
+        if (ediciones.isEmpty()) {
+            JOptionPane.showMessageDialog(ventana,
+                    "No hay ediciones registradas.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         String[] nombresEspectadores = espectadores.stream()
                 .map(Espectador::getNombre).toArray(String[]::new);
+        String[] nombresEdiciones = ediciones.stream()
+                .map(ed -> ed.getAnio() + " - " + ed.getCiudad()).toArray(String[]::new);
 
         JDialog dialog = new JDialog(ventana, "Registrar voto del público", true);
-        dialog.setSize(420, 240);
+        dialog.setSize(520, 330);
         dialog.setLocationRelativeTo(ventana);
         dialog.setLayout(new BorderLayout(10, 10));
 
-        JPanel panelCampos = new JPanel(new GridLayout(3, 2, 10, 10));
+        JPanel panelCampos = new JPanel(new GridLayout(4, 2, 10, 10));
         panelCampos.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
 
+        JComboBox<String> comboEdicion = new JComboBox<>(nombresEdiciones);
         JComboBox<String> comboEspectador = new JComboBox<>(nombresEspectadores);
         JComboBox<String> comboPelicula = new JComboBox<>();
         JComboBox<Integer> comboPuntaje = new JComboBox<>(new Integer[]{5, 4, 3, 2, 1});
+        comboEdicion.setSelectedIndex(ediciones.size() - 1); // la edición más reciente
 
+        panelCampos.add(new JLabel("Edición:"));
+        panelCampos.add(comboEdicion);
         panelCampos.add(new JLabel("Espectador:"));
         panelCampos.add(comboEspectador);
         panelCampos.add(new JLabel("Película:"));
@@ -123,21 +139,41 @@ public class PanelVotoPublico extends JPanel {
         panelCampos.add(new JLabel("Puntaje (estrellas):"));
         panelCampos.add(comboPuntaje);
 
-        // Solo se ofrecen las películas que el espectador vio y todavía no votó
+        JLabel labelAyuda = new JLabel();
+        labelAyuda.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        labelAyuda.setBorder(BorderFactory.createEmptyBorder(5, 20, 0, 20));
+
+        // Solo se ofrecen las películas de la edición elegida que el espectador vio y todavía no votó
         Runnable actualizarPeliculas = () -> {
             comboPelicula.removeAllItems();
+            Edicion edicion = ediciones.get(comboEdicion.getSelectedIndex());
             Espectador esp = espectadores.get(comboEspectador.getSelectedIndex());
             List<Pelicula> vistas = new ArrayList<>();
             for (Entrada en : esp.getEntradas()) {
                 Pelicula p = en.getFuncion().getPelicula();
-                if (!vistas.contains(p) && !p.fueVotadaPor(esp)) {
+                boolean deLaEdicion = ventana.getFestivalServicio().buscarEdicionDePelicula(p) == edicion;
+                if (deLaEdicion && !vistas.contains(p) && !p.fueVotadaPor(esp)) {
                     vistas.add(p);
                     comboPelicula.addItem(p.getTitulo());
                 }
             }
+            if (vistas.isEmpty()) {
+                labelAyuda.setForeground(new Color(150, 50, 50));
+                labelAyuda.setText("<html>" + esp.getNombre() + " no tiene películas para votar en la edición "
+                        + edicion.getAnio() + ": solo se vota lo que se vio (con entrada) y una vez por película.</html>");
+            } else {
+                labelAyuda.setForeground(Color.DARK_GRAY);
+                labelAyuda.setText("<html>Solo aparecen las películas de la edición para las que el espectador "
+                        + "tiene entrada y todavía no votó.</html>");
+            }
         };
+        comboEdicion.addActionListener(e -> actualizarPeliculas.run());
         comboEspectador.addActionListener(e -> actualizarPeliculas.run());
         actualizarPeliculas.run();
+
+        JPanel panelCentro = new JPanel(new BorderLayout());
+        panelCentro.add(panelCampos, BorderLayout.CENTER);
+        panelCentro.add(labelAyuda, BorderLayout.SOUTH);
 
         JLabel labelError = new JLabel(" ");
         labelError.setForeground(Color.RED);
@@ -159,7 +195,7 @@ public class PanelVotoPublico extends JPanel {
         btnAceptar.addActionListener(e -> {
             String titulo = (String) comboPelicula.getSelectedItem();
             if (titulo == null) {
-                labelError.setText("El espectador no tiene películas pendientes de votar.");
+                labelError.setText("No hay película para votar con esta edición y espectador.");
                 return;
             }
             Espectador espectador = espectadores.get(comboEspectador.getSelectedIndex());
@@ -175,7 +211,7 @@ public class PanelVotoPublico extends JPanel {
             }
         });
 
-        dialog.add(panelCampos, BorderLayout.CENTER);
+        dialog.add(panelCentro, BorderLayout.CENTER);
         dialog.add(panelSur, BorderLayout.SOUTH);
         dialog.setVisible(true);
     }

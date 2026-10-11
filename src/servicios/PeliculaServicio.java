@@ -2,6 +2,7 @@ package servicios;
 
 import modelo.*;
 import excepciones.EntidadNoEncontradaException;
+import excepciones.FestivalException;
 import excepciones.VotoInvalidoException;
 
 import java.util.ArrayList;
@@ -52,11 +53,12 @@ public class PeliculaServicio {
         Jurado j = new Jurado(nombre, email, nacionalidad);
         jurados.add(j);
     }
-    public void agregarJurado(Jurado j) {
-        jurados.add(j);
-    }
 
+    // El jurado puntúa de 0 a 10.
     public void registrarEvaluacion(String nombreJurado, String tituloPelicula, double puntaje) {
+        if (puntaje < 0 || puntaje > 10) {
+            throw new FestivalException("El puntaje debe estar entre 0 y 10.");
+        }
         Jurado jurado = buscarJurado(nombreJurado);
         Pelicula pelicula = buscarPelicula(tituloPelicula);
         Evaluacion e = new Evaluacion(puntaje, pelicula, jurado);
@@ -80,6 +82,28 @@ public class PeliculaServicio {
         VotoPublico voto = new VotoPublico(puntaje, pelicula, espectador);
         pelicula.agregarVotoPublico(voto);
         votosPublico.add(voto);
+    }
+
+    // Solo se puede eliminar una película sin funciones, evaluaciones ni votos, para no dejar datos inconsistentes.
+    // Se la quita también de las secciones en las que participa y de su director y actores.
+    public void eliminarPelicula(String titulo, List<Edicion> ediciones) {
+        Pelicula pelicula = buscarPelicula(titulo);
+        if (!pelicula.getFunciones().isEmpty()) {
+            throw new FestivalException("No se puede eliminar " + titulo + ": tiene funciones programadas.");
+        }
+        if (!pelicula.getEvaluaciones().isEmpty() || !pelicula.getVotosPublico().isEmpty()) {
+            throw new FestivalException("No se puede eliminar " + titulo + ": tiene evaluaciones o votos registrados.");
+        }
+        for (Edicion e : ediciones) {
+            for (Seccion s : e.getSecciones()) {
+                s.eliminarPelicula(pelicula);
+            }
+        }
+        pelicula.getDirector().quitarPelicula(pelicula);
+        for (Actor a : pelicula.getActores()) {
+            a.quitarPelicula(pelicula);
+        }
+        peliculas.remove(pelicula);
     }
 
     public Pelicula determinarGanadoraPublico(Edicion edicion) {

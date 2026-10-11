@@ -1,18 +1,22 @@
 ========================================================
 SISTEMA DE GESTIÓN DE FESTIVAL DE CINE
-Programación Orientada a Objetos - UADE
-Alumno: Milano, Carina Victoria - LU: 1227609
+Proceso de Desarrollo de Software - UADE
+
+Grupo 10:
+  Juan Martín Ojeda    - Legajo 1175491
+  Luis Ferreiro        - Legajo 1208937
+  Valentino Pippo      - Legajo 1192965
+  Fabricio Boccardo    - Legajo 1112843
+  Carina Milano        - Legajo 1227609
 ========================================================
 
 DESCRIPCIÓN DEL SISTEMA
 ------------------------
 Sistema de gestión para un Festival Internacional de Cine desarrollado en Java.
-Permite administrar ediciones del festival, películas, funciones, venta de
-entradas presenciales y streaming, evaluaciones del jurado y determinación
-de películas ganadoras por sección.
-
-Esta tercera etapa incorpora una interfaz gráfica desarrollada con Java Swing,
-reemplazando completamente la interacción por consola de la Etapa 2.
+Permite administrar ediciones del festival y sus secciones, películas,
+funciones presenciales y streaming, venta de entradas y abonos, evaluaciones
+del jurado, voto del público y determinación de películas ganadoras.
+La interfaz es gráfica, desarrollada con Java Swing.
 
 
 ORGANIZACIÓN DEL PROYECTO
@@ -26,9 +30,9 @@ El proyecto está organizado en los siguientes paquetes:
   ui/             → Interfaz gráfica (Swing)
     peliculas/    → Paneles de gestión de películas, directores y actores
     funciones/    → Panel de gestión de funciones
-    entradas/     → Paneles de venta de entradas y espectadores
-    evaluaciones/ → Panel de evaluaciones y ganadores
-    festival/     → Paneles de ediciones y salas
+    entradas/     → Paneles de venta de entradas, abonos y espectadores
+    evaluaciones/ → Paneles de evaluaciones, ganadores y voto del público
+    festival/     → Paneles de ediciones, secciones y salas
   app/            → Clase Main (punto de entrada)
 
 
@@ -42,6 +46,9 @@ CLASES DEL MODELO
   - Funcion (abstract) → FuncionPresencial, FuncionStreaming
   - Entrada (abstract) → EntradaPresencial, EntradaStreaming
   - Sala
+  - Abono (abstract) → AbonoTresDias, AbonoFull, AbonoStreaming
+  - TipoTarifa (enum): GENERAL, ESTUDIANTE, JUBILADO
+  - VotoPublico
 
 
 SERVICIOS
@@ -51,23 +58,30 @@ principio de separación de responsabilidades. La lógica NO se resuelve
 en la UI ni en el Main.
 
   FestivalServicio:
-    Gestiona el festival, ediciones, secciones y salas.
+    Gestiona el festival, ediciones, secciones (con su premio) y salas.
+    Asocia y quita películas de las secciones. No permite dos ediciones
+    del mismo año ni dos secciones del mismo tipo en una edición.
+    Una película compite en una sola edición (puede estar en varias
+    secciones de esa edición), así sus evaluaciones y votos cuentan solo
+    para los premios de esa edición.
 
   PeliculaServicio:
-    Gestiona películas, directores, actores, jurados y evaluaciones.
-    Calcula promedios y determina películas ganadoras por sección.
+    Gestiona películas, directores, actores, jurados, evaluaciones y
+    votos del público. Calcula promedios y determina películas ganadoras.
+    Valida el puntaje del jurado (0 a 10) y controla que una película
+    solo pueda eliminarse si no tiene funciones, evaluaciones ni votos.
 
   EntradaServicio:
-    Gestiona funciones presenciales y streaming, espectadores y
-    venta de entradas. Valida disponibilidad, butacas y capacidades.
+    Gestiona funciones presenciales y streaming, espectadores, venta de
+    entradas, abonos y reservas. Calcula precios y valida disponibilidad,
+    butacas y capacidades.
 
   InicializadorDatos:
     Precarga datos iniciales al arrancar el sistema.
 
 
-INTERFAZ GRÁFICA - ETAPA 3
----------------------------
-La interfaz reemplaza completamente la interacción por consola.
+INTERFAZ GRÁFICA
+----------------
 Toda la lógica de negocio permanece en los servicios; las ventanas
 actúan únicamente como capa de presentación.
 
@@ -77,15 +91,19 @@ Ventana principal:
   - Confirmación antes de cerrar el sistema
 
 Paneles implementados:
-  - Gestión de películas (con filtro de búsqueda)
+  - Gestión de películas (con filtro de búsqueda y eliminación)
   - Gestión de directores
   - Gestión de actores (con asociación a películas)
   - Gestión de funciones presenciales y streaming
-  - Venta de entradas presenciales y streaming
+  - Venta de entradas presenciales y streaming (con alta de espectador)
+  - Abonos y reservas (con alta de espectador)
   - Gestión de espectadores
   - Gestión de salas
   - Gestión de ediciones
+  - Gestión de secciones: alta de sección con su premio y asociación
+    de películas a cada sección
   - Evaluaciones y ganadores por sección
+  - Voto del público y Premio del Público
 
 Funcionalidades adicionales implementadas:
   - Barra de estado informativa (JLabel en la parte inferior)
@@ -102,18 +120,12 @@ Persistencia:
   Se persisten en archivos: salas, directores, actores, jurados,
   espectadores, películas y evaluaciones.
 
-  En la Etapa 2 se tomó la decisión de no persistir ediciones, secciones,
-  funciones y entradas en archivos, dado que guardar sus relaciones entre
-  objetos requeriría una complejidad mayor a la del alcance del curso.
-  Estos datos se inicializan automáticamente al arrancar mediante
-  InicializadorDatos.
-
-  En la Etapa 3 se incorporaron en la interfaz gráfica los formularios
-  para gestionar ediciones, secciones y funciones, demostrando el uso
-  correcto de componentes Swing y validaciones. Sin embargo, por la misma
-  razón de diseño, los datos ingresados a través de estos formularios
-  estarán disponibles solo durante la sesión actual y no se guardarán
-  en archivo al cerrar el sistema.
+  Se decidió no persistir en archivos las ediciones, secciones,
+  funciones, entradas, abonos y votos, dado que guardar sus relaciones
+  entre objetos requeriría una complejidad mayor a la del alcance del
+  curso. Estos datos se inicializan automáticamente al arrancar
+  mediante InicializadorDatos, y lo que se cargue desde la interfaz
+  para estas entidades está disponible solo durante la sesión actual.
 
 Butacas:
   Las butacas no se modelan como objetos independientes sino como
@@ -137,7 +149,8 @@ EXCEPCIONES PERSONALIZADAS
   Unchecked (extienden RuntimeException):
     FestivalException, ButacaOcupadaException,
     CapacidadExcedidaException, FuncionNoDisponibleException,
-    EntidadNoEncontradaException
+    EntidadNoEncontradaException, AbonoInvalidoException,
+    VotoInvalidoException
 
   Checked (extiende Exception):
     PersistenciaException → errores al leer o escribir archivos
@@ -159,12 +172,12 @@ DATOS PRECARGADOS
 -----------------
 Al iniciar el sistema se cargan automáticamente desde archivos:
   - 5 salas
-  - 10 directores
+  - 11 directores
   - 10 actores
   - 10 espectadores
   - 5 jurados
-  - 10 películas
-  - 24 evaluaciones
+  - 17 películas
+  - 43 evaluaciones
 
 Y se inicializan via InicializadorDatos:
   - 3 ediciones (2024-Madrid, 2025-Paris, 2026-Buenos Aires)
@@ -172,6 +185,7 @@ Y se inicializan via InicializadorDatos:
   - Asociaciones película-sección
   - 20 funciones (14 presenciales y 6 streaming)
   - Algunas entradas vendidas para demostrar ocupación
+  - 3 abonos con reservas y 18 votos del público
 
 
 CÓMO EJECUTAR EL SISTEMA
@@ -184,10 +198,10 @@ CÓMO EJECUTAR EL SISTEMA
 5. Al cerrar, el sistema preguntará si desea guardar los datos
 
 
-EXTENSIÓN ORIGINAL - FUNCIONES STREAMING
------------------------------------------
-Se incorporó la posibilidad de realizar funciones streaming
-además de las funciones presenciales.
+FUNCIONES Y ENTRADAS STREAMING
+------------------------------
+Además de las funciones presenciales, el sistema permite funciones
+streaming.
 
   - Funcion (abstract) → FuncionPresencial y FuncionStreaming
   - Entrada (abstract) → EntradaPresencial y EntradaStreaming
@@ -195,15 +209,13 @@ además de las funciones presenciales.
 FuncionStreaming incorpora: enlace, capacidad virtual y espectadores
 conectados. EntradaStreaming genera un enlace de acceso virtual.
 
-La extensión se integró utilizando herencia y polimorfismo.
-El método calcularOcupacion() se comporta de manera diferente en
-cada subclase, demostrando polimorfismo.
+Se modela con herencia y polimorfismo: el método calcularOcupacion()
+se comporta de manera diferente en cada subclase.
 
-========================================================
 
-NUEVAS FUNCIONALIDADES - ABONOS Y VOTO DEL PÚBLICO
---------------------------------------------------
-1) Abonos del festival y precios (menú Entradas > Abonos)
+FUNCIONALIDADES AGREGADAS EN ESTE PROYECTO
+------------------------------------------
+1) Abonos, precios y descuentos (menú Entradas > Abonos)
 
   Precios:
     Las entradas y los abonos ahora tienen precio. Al vender se elige
@@ -236,6 +248,8 @@ NUEVAS FUNCIONALIDADES - ABONOS Y VOTO DEL PÚBLICO
 
 2) Voto del público (menú Evaluaciones > Voto del público)
 
+  - Se elige la edición y el espectador; la pantalla ofrece solo las
+    películas de esa edición que el espectador vio y todavía no votó.
   - Un espectador puede votar de 1 a 5 estrellas una película para la
     que tiene entrada (comprada o reservada con abono).
   - Cada espectador vota una sola vez cada película.
@@ -246,7 +260,3 @@ NUEVAS FUNCIONALIDADES - ABONOS Y VOTO DEL PÚBLICO
   Nuevas clases: TipoTarifa, Abono, AbonoTresDias, AbonoFull,
   AbonoStreaming, VotoPublico, AbonoInvalidoException,
   VotoInvalidoException, PanelAbonos, PanelVotoPublico.
-
-  Igual que las funciones y las entradas, los abonos y los votos no se
-  persisten en archivo: se precargan con InicializadorDatos (3 abonos
-  con reservas y 18 votos del público).

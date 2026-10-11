@@ -78,39 +78,39 @@ public class InicializadorDatos {
         Pelicula laLaLand = peliculaServicio.buscarPelicula("La La Land");
         Pelicula volver = peliculaServicio.buscarPelicula("Volver");
         Pelicula grandBudapest = peliculaServicio.buscarPelicula("The Grand Budapest Hotel");
+        Pelicula dolorYGloria = peliculaServicio.buscarPelicula("Dolor y gloria");
+        Pelicula moonriseKingdom = peliculaServicio.buscarPelicula("Moonrise Kingdom");
+        Pelicula whiplash = peliculaServicio.buscarPelicula("Whiplash");
+        Pelicula ladyBird = peliculaServicio.buscarPelicula("Lady Bird");
+        Pelicula interstellar = peliculaServicio.buscarPelicula("Interstellar");
+        Pelicula gravity = peliculaServicio.buscarPelicula("Gravity");
+        Pelicula arrival = peliculaServicio.buscarPelicula("Arrival");
+
+        // Cada película compite en una sola edición (puede estar en varias secciones de esa edición)
 
         // Edicion 2026
         festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.COMPETENCIA_OFICIAL, oppenheimer);
         festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.COMPETENCIA_OFICIAL, parasite);
-        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.COMPETENCIA_OFICIAL, tar);
-        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.COMPETENCIA_OFICIAL, roma);
-        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.CINE_INDEPENDIENTE, barbie);
         festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.CINE_INDEPENDIENTE, volver);
-        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.CINE_INDEPENDIENTE, grandBudapest);
-        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.CORTOMETRAJE, irishman);
+        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.CINE_INDEPENDIENTE, barbie);
         festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.CORTOMETRAJE, laLaLand);
-        festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.NUEVOS_TALENTOS, dune);
         festivalServicio.asociarPeliculaASeccion(2026, TipoSeccion.NUEVOS_TALENTOS, barbie);
 
         // Edicion 2025
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.COMPETENCIA_OFICIAL, parasite);
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.COMPETENCIA_OFICIAL, oppenheimer);
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.CINE_INDEPENDIENTE, barbie);
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.CINE_INDEPENDIENTE, volver);
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.CORTOMETRAJE, tar);
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.CORTOMETRAJE, irishman);
+        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.COMPETENCIA_OFICIAL, tar);
+        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.COMPETENCIA_OFICIAL, interstellar);
+        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.CINE_INDEPENDIENTE, grandBudapest);
+        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.CORTOMETRAJE, gravity);
         festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.NUEVOS_TALENTOS, dune);
-        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.NUEVOS_TALENTOS, laLaLand);
+        festivalServicio.asociarPeliculaASeccion(2025, TipoSeccion.NUEVOS_TALENTOS, arrival);
 
         // Edicion 2024
         festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.COMPETENCIA_OFICIAL, irishman);
         festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.COMPETENCIA_OFICIAL, roma);
-        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CINE_INDEPENDIENTE, volver);
-        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CINE_INDEPENDIENTE, grandBudapest);
-        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CORTOMETRAJE, tar);
-        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CORTOMETRAJE, laLaLand);
-        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.NUEVOS_TALENTOS, dune);
-        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.NUEVOS_TALENTOS, barbie);
+        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CINE_INDEPENDIENTE, dolorYGloria);
+        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CINE_INDEPENDIENTE, moonriseKingdom);
+        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.CORTOMETRAJE, whiplash);
+        festivalServicio.asociarPeliculaASeccion(2024, TipoSeccion.NUEVOS_TALENTOS, ladyBird);
     }
     private void inicializarReparto() {
         if (peliculaServicio.getPeliculas().isEmpty()) return;
