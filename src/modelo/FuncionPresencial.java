@@ -1,31 +1,30 @@
 package modelo;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
+import excepciones.ButacaOcupadaException;
+import excepciones.CapacidadExcedidaException;
+import excepciones.FestivalException;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class FuncionPresencial extends Funcion {
-    private Sala sala;
-    private List<Integer> butacasOcupadas;
+    public static final double PRECIO_BASE = 8000;
 
-    public FuncionPresencial(LocalDate fecha, LocalTime horario, Pelicula pelicula, Sala sala) {
-        super(fecha, horario, pelicula);
-        this.sala = sala;
-        this.butacasOcupadas = new ArrayList<>();
+    private final Sala sala;
+    // Set: una butaca no puede quedar ocupada dos veces (antes era una List<Integer>)
+    private final Set<Integer> butacasOcupadas;
+
+    public FuncionPresencial(Pelicula pelicula, Sala sala, LocalDateTime fechaHora) {
+        super(pelicula, fechaHora);
+        this.sala = Validar.presente(sala, "La sala es obligatoria.");
+        this.butacasOcupadas = new TreeSet<>();
     }
 
     @Override
     public boolean verificarDisponibilidad() {
-        return butacasOcupadas.size() < sala.getCantidadButacas();
-    }
-
-    public void ocuparButaca(int numeroButaca) {
-        butacasOcupadas.add(numeroButaca);
-    }
-
-    public void liberarButaca(int numeroButaca) {
-        butacasOcupadas.remove(Integer.valueOf(numeroButaca));
+        return !sala.estaLlena(butacasOcupadas.size());
     }
 
     public boolean butacaDisponible(int numeroButaca) {
@@ -33,19 +32,73 @@ public class FuncionPresencial extends Funcion {
     }
 
     @Override
+    protected void ocuparLugar(SolicitudEntrada solicitud) {
+        int numeroButaca = solicitud.numeroButaca();
+        if (!sala.esButacaValida(numeroButaca)) {
+            throw new FestivalException("Número de butaca inválido. Debe estar entre 1 y " + sala.getCantidadButacas());
+        }
+        if (!verificarDisponibilidad()) {
+            throw new CapacidadExcedidaException(getTituloPelicula());
+        }
+        if (!butacaDisponible(numeroButaca)) {
+            throw new ButacaOcupadaException(numeroButaca);
+        }
+        butacasOcupadas.add(numeroButaca);
+    }
+
+    @Override
+    protected Entrada crearEntrada(Numerador numerador, SolicitudEntrada solicitud) {
+        return new EntradaPresencial("EP-" + numerador.siguiente(), this, solicitud);
+    }
+
+    void liberarButaca(int numeroButaca) {
+        butacasOcupadas.remove(numeroButaca);
+    }
+
+    // No puede haber dos funciones presenciales en la misma sala, fecha y horario
+    public boolean seSuperponeCon(FuncionPresencial otra) {
+        return sala == otra.sala && coincideEnHorarioCon(otra);
+    }
+
+    @Override
+    public boolean esCubiertaPor(Abono abono) {
+        return abono.cubrePresencial(this);
+    }
+
+    @Override
     public double calcularOcupacion() {
-        return (double) butacasOcupadas.size() / sala.getCantidadButacas() * 100;
+        return sala.porcentajeOcupado(butacasOcupadas.size());
+    }
+
+    @Override
+    public double getPrecioBase() {
+        return PRECIO_BASE;
+    }
+
+    @Override
+    public boolean requiereButaca() {
+        return true;
+    }
+
+    @Override
+    public String getModalidad() {
+        return "Presencial";
+    }
+
+    @Override
+    public String getLugar() {
+        return sala.getNombre();
+    }
+
+    @Override
+    public String getEstadoOcupacion() {
+        return butacasOcupadas.isEmpty() ? "ninguna" : butacasOcupadas.toString();
     }
 
     public Sala getSala() {
         return sala;
     }
-    public List<Integer> getButacasOcupadas() {
-        return butacasOcupadas;
-    }
-
-    @Override
-    public String toString() {
-        return "Presencial - " + super.toString() + " - Sala: " + sala.getNombre();
+    public Set<Integer> getButacasOcupadas() {
+        return Collections.unmodifiableSet(butacasOcupadas);
     }
 }

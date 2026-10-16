@@ -1,14 +1,21 @@
 package modelo;
 
 public abstract class Persona {
-    private String nombre;
-    private String email;
-    private String nacionalidad;
+    private final String nombre;
+    private final String email;
+    private final String nacionalidad;
 
-    public Persona(String nombre, String email, String nacionalidad) {
-        this.nombre = nombre;
-        this.email = email;
-        this.nacionalidad = nacionalidad;
+    protected Persona(String nombre, String email, String nacionalidad) {
+        this.nombre = Validar.texto(nombre, "El nombre es obligatorio.");
+        this.email = Validar.texto(email, "El email es obligatorio.");
+        this.nacionalidad = Validar.texto(nacionalidad, "La nacionalidad es obligatoria.");
+    }
+
+    // Template Method: Persona arma el toString y cada subclase solo dice qué rol cumple
+    protected abstract String getRol();
+
+    public boolean seLlama(String otroNombre) {
+        return otroNombre != null && nombre.equalsIgnoreCase(otroNombre.trim());
     }
 
     public String getNombre() { return nombre; }
@@ -17,6 +24,6 @@ public abstract class Persona {
 
     @Override
     public String toString() {
-        return nombre + " (" + nacionalidad + ")";
+        return getRol() + ": " + nombre + " (" + nacionalidad + ")";
     }
 }

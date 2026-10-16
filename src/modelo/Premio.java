@@ -1,12 +1,13 @@
 package modelo;
 
+// Objeto de valor: el premio que otorga una sección
 public class Premio {
-    private String nombre;
-    private String descripcion;
+    private final String nombre;
+    private final String descripcion;
 
     public Premio(String nombre, String descripcion) {
-        this.nombre = nombre;
-        this.descripcion = descripcion;
+        this.nombre = Validar.texto(nombre, "El nombre del premio es obligatorio.");
+        this.descripcion = descripcion == null ? "" : descripcion.trim();
     }
 
     public String getNombre() {

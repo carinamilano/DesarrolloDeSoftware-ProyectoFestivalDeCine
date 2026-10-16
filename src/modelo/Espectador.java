@@ -1,11 +1,12 @@
 package modelo;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Espectador extends Persona {
-    private List<Entrada> entradas;
-    private List<Abono> abonos;
+    private final List<Entrada> entradas;
+    private final List<Abono> abonos;
 
     public Espectador(String nombre, String email, String nacionalidad) {
         super(nombre, email, nacionalidad);
@@ -13,35 +14,41 @@ public class Espectador extends Persona {
         this.abonos = new ArrayList<>();
     }
 
-    public void agregarEntrada(Entrada e) {
-        entradas.add(e);
+    void agregarEntrada(Entrada entrada) {
+        entradas.add(entrada);
     }
 
-    public void quitarEntrada(Entrada e) {
-        entradas.remove(e);
+    void quitarEntrada(Entrada entrada) {
+        entradas.remove(entrada);
     }
 
-    public void agregarAbono(Abono a) {
-        abonos.add(a);
+    public void agregarAbono(Abono abono) {
+        abonos.add(abono);
     }
 
     // Un espectador puede votar una película si tiene entrada para alguna de sus funciones
     public boolean tieneEntradaPara(Pelicula pelicula) {
-        for (Entrada e : entradas) {
-            if (e.getFuncion().getPelicula() == pelicula) return true;
-        }
-        return false;
+        return entradas.stream().anyMatch(entrada -> entrada.esPara(pelicula));
+    }
+
+    public List<Pelicula> getPeliculasVistas() {
+        return entradas.stream().map(Entrada::getPelicula).distinct().toList();
+    }
+
+    public int cantidadEntradas() {
+        return entradas.size();
     }
 
     public List<Entrada> getEntradas() {
-        return entradas;
+        return Collections.unmodifiableList(entradas);
     }
+
     public List<Abono> getAbonos() {
-        return abonos;
+        return Collections.unmodifiableList(abonos);
     }
 
     @Override
-    public String toString() {
-        return "Espectador: " + getNombre();
+    protected String getRol() {
+        return "Espectador";
     }
 }

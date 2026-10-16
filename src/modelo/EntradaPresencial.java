@@ -1,17 +1,30 @@
 package modelo;
 
 public class EntradaPresencial extends Entrada {
-    private int butaca;
+    private final FuncionPresencial funcion;
+    private final int butaca;
 
-    public EntradaPresencial(String codigo, Funcion funcion, Espectador espectador, int butaca, double precio, Abono abono) {
-        super(codigo, funcion, espectador, precio, abono);
-        this.butaca = butaca;
+    // La crea FuncionPresencial.emitirEntrada (Creator)
+    EntradaPresencial(String codigo, FuncionPresencial funcion, SolicitudEntrada solicitud) {
+        super(codigo, solicitud);
+        this.funcion = funcion;
+        this.butaca = solicitud.numeroButaca();
+    }
+
+    @Override
+    public FuncionPresencial getFuncion() {
+        return funcion;
+    }
+
+    @Override
+    protected void liberarLugar() {
+        funcion.liberarButaca(butaca);
+    }
+
+    @Override
+    public String getDetalle() {
+        return "Butaca: " + butaca;
     }
 
     public int getButaca() { return butaca; }
-
-    @Override
-    public String toString() {
-        return super.toString() + " - Butaca: " + butaca;
-    }
 }

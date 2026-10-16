@@ -1,46 +1,74 @@
 package modelo;
 
-import java.time.LocalDate;
+import excepciones.AbonoInvalidoException;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public abstract class Abono {
-    private String codigo;
-    private Espectador espectador;
-    private TipoTarifa tarifa;
-    private double precio;
-    private LocalDate fechaCompra;
-    private List<Entrada> reservas;
+    private final String codigo;
+    private final Espectador espectador;
+    private final TipoTarifa tarifa;
+    private final TipoAbono tipo;
+    private final double precio;
+    private final List<Entrada> reservas;
 
-    public Abono(String codigo, Espectador espectador, TipoTarifa tarifa, double precio) {
-        this.codigo = codigo;
-        this.espectador = espectador;
-        this.tarifa = tarifa;
-        this.precio = precio;
-        this.fechaCompra = LocalDate.now();
+    protected Abono(String codigo, Espectador espectador, TipoTarifa tarifa, TipoAbono tipo) {
+        this.codigo = Validar.texto(codigo, "El código del abono es obligatorio.");
+        this.espectador = Validar.presente(espectador, "El espectador es obligatorio.");
+        this.tarifa = Validar.presente(tarifa, "La tarifa es obligatoria.");
+        this.tipo = tipo;
+        this.precio = tipo.precioCon(tarifa);
         this.reservas = new ArrayList<>();
     }
 
-    // Cada tipo de abono define qué funciones cubre
-    public abstract boolean cubre(Funcion funcion);
-    public abstract String getTipo();
     public abstract String getCobertura();
 
-    public void agregarReserva(Entrada e) {
-        reservas.add(e);
+    // Cada tipo de abono define qué funciones cubre. La función resuelve de qué tipo es
+    // (doble despacho), así no hace falta preguntar con instanceof
+    public boolean cubre(Funcion funcion) {
+        return funcion.esCubiertaPor(this);
     }
 
-    public void quitarReserva(Entrada e) {
-        reservas.remove(e);
-    }
-
-    public boolean tieneReservaEn(LocalDate fecha, java.time.LocalTime horario) {
-        for (Entrada e : reservas) {
-            if (e.getFuncion().getFecha().equals(fecha) && e.getFuncion().getHorario().equals(horario)) {
-                return true;
-            }
-        }
+    protected boolean cubrePresencial(FuncionPresencial funcion) {
         return false;
+    }
+
+    protected boolean cubreStreaming(FuncionStreaming funcion) {
+        return false;
+    }
+
+    public void validarReserva(Funcion funcion) {
+        if (funcion.yaPaso()) {
+            throw new AbonoInvalidoException("la función ya pasó.");
+        }
+        if (!cubre(funcion)) {
+            throw new AbonoInvalidoException("el " + tipo + " no cubre la función del " + funcion.getFecha() + ".");
+        }
+        if (tieneReservaEnElHorarioDe(funcion)) {
+            throw new AbonoInvalidoException("ya tiene una reserva el " + funcion.getFecha() + " a las " + funcion.getHorario() + ".");
+        }
+    }
+
+    private boolean tieneReservaEnElHorarioDe(Funcion funcion) {
+        return reservas.stream().anyMatch(reserva -> reserva.esEnElHorarioDe(funcion));
+    }
+
+    void agregarReserva(Entrada reserva) {
+        reservas.add(reserva);
+    }
+
+    void quitarReserva(Entrada reserva) {
+        reservas.remove(reserva);
+    }
+
+    public boolean tieneReservas() {
+        return !reservas.isEmpty();
+    }
+
+    public int cantidadReservas() {
+        return reservas.size();
     }
 
     public String getCodigo() {
@@ -49,21 +77,24 @@ public abstract class Abono {
     public Espectador getEspectador() {
         return espectador;
     }
+    public String getNombreEspectador() {
+        return espectador.getNombre();
+    }
     public TipoTarifa getTarifa() {
         return tarifa;
+    }
+    public TipoAbono getTipo() {
+        return tipo;
     }
     public double getPrecio() {
         return precio;
     }
-    public LocalDate getFechaCompra() {
-        return fechaCompra;
-    }
     public List<Entrada> getReservas() {
-        return reservas;
+        return Collections.unmodifiableList(reservas);
     }
 
     @Override
     public String toString() {
-        return codigo + " - " + getTipo() + " - " + espectador.getNombre();
+        return codigo + " - " + tipo + " - " + getNombreEspectador();
     }
 }

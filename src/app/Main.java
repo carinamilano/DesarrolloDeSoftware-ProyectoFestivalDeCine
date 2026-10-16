@@ -1,47 +1,32 @@
 package app;
 
 import excepciones.PersistenciaException;
-import modelo.Festival;
+import inicializacion.InicializadorDatos;
 import persistencia.Persistencia;
-import servicios.EntradaServicio;
-import servicios.FestivalServicio;
-import servicios.InicializadorDatos;
-import servicios.PeliculaServicio;
+import persistencia.PersistenciaArchivos;
+import repositorio.Catalogo;
+import servicios.SistemaFestival;
 import ui.VentanaPrincipal;
-import javax.swing.*;
-import java.util.ArrayList;
 
+import javax.swing.*;
+
+// Punto de entrada: arma las piezas y las conecta. Es el único lugar que conoce las clases concretas
 public class Main {
     public static void main(String[] args) {
-
-        Festival festival = new Festival("Festival Internacional de Cine");
-        Persistencia persistencia = new Persistencia();
-        FestivalServicio festivalServicio = new FestivalServicio(festival, new ArrayList<>());
-        PeliculaServicio peliculaServicio = new PeliculaServicio();
-        EntradaServicio entradaServicio = new EntradaServicio();
+        Catalogo catalogo = new Catalogo("Festival Internacional de Cine");
+        Persistencia persistencia = new PersistenciaArchivos(catalogo);
 
         try {
-            persistencia.cargarSalas(festivalServicio.getSalas());
-            persistencia.cargarDirectores(peliculaServicio.getDirectores());
-            persistencia.cargarActores(peliculaServicio.getActores());
-            persistencia.cargarJurados(peliculaServicio.getJurados());
-            persistencia.cargarEspectadores(entradaServicio.getEspectadores());
-            persistencia.cargarPeliculas(peliculaServicio.getPeliculas(), peliculaServicio.getDirectores());
-            persistencia.cargarEvaluaciones(peliculaServicio.getEvaluaciones(), peliculaServicio.getPeliculas(), peliculaServicio.getJurados());
+            persistencia.cargar();
         } catch (PersistenciaException e) {
             JOptionPane.showMessageDialog(null,
                     "Advertencia al cargar datos: " + e.getMessage(),
                     "Advertencia", JOptionPane.WARNING_MESSAGE);
         }
 
-        InicializadorDatos inicializador = new InicializadorDatos(festivalServicio, peliculaServicio, entradaServicio);
-        inicializador.inicializar();
+        SistemaFestival sistema = new SistemaFestival(catalogo);
+        new InicializadorDatos(sistema).inicializar();
 
-        SwingUtilities.invokeLater(() -> {
-            VentanaPrincipal ventana = new VentanaPrincipal(
-                    festivalServicio, peliculaServicio, entradaServicio, persistencia
-            );
-            ventana.setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new VentanaPrincipal(sistema, persistencia).setVisible(true));
     }
 }

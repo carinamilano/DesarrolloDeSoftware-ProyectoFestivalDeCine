@@ -1,17 +1,24 @@
 package modelo;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+import excepciones.CapacidadExcedidaException;
+import excepciones.FestivalException;
+
+import java.time.LocalDateTime;
 
 public class FuncionStreaming extends Funcion {
-    private String enlace;
-    private int capacidadVirtual;
+    public static final double PRECIO_BASE = 5000;
+    public static final int CAPACIDAD_MAXIMA = 1000;
+
+    private final String enlace;
+    private final int capacidadVirtual;
     private int espectadoresConectados;
 
-    public FuncionStreaming(LocalDate fecha, LocalTime horario, Pelicula pelicula,
-                            String enlace, int capacidadVirtual) {
-        super(fecha, horario, pelicula);
-        this.enlace = enlace;
+    public FuncionStreaming(Pelicula pelicula, String enlace, int capacidadVirtual, LocalDateTime fechaHora) {
+        super(pelicula, fechaHora);
+        if (capacidadVirtual < 1 || capacidadVirtual > CAPACIDAD_MAXIMA) {
+            throw new FestivalException("La capacidad debe estar entre 1 y " + CAPACIDAD_MAXIMA + ".");
+        }
+        this.enlace = Validar.texto(enlace, "El enlace es obligatorio.");
         this.capacidadVirtual = capacidadVirtual;
         this.espectadoresConectados = 0;
     }
@@ -21,12 +28,26 @@ public class FuncionStreaming extends Funcion {
         return espectadoresConectados < capacidadVirtual;
     }
 
-    public void agregarEspectador() {
+    @Override
+    protected void ocuparLugar(SolicitudEntrada solicitud) {
+        if (!verificarDisponibilidad()) {
+            throw new CapacidadExcedidaException(getTituloPelicula());
+        }
         espectadoresConectados++;
     }
 
-    public void quitarEspectador() {
+    @Override
+    protected Entrada crearEntrada(Numerador numerador, SolicitudEntrada solicitud) {
+        return new EntradaStreaming("ES-" + numerador.siguiente(), this, solicitud);
+    }
+
+    void desconectarEspectador() {
         if (espectadoresConectados > 0) espectadoresConectados--;
+    }
+
+    @Override
+    public boolean esCubiertaPor(Abono abono) {
+        return abono.cubreStreaming(this);
     }
 
     @Override
@@ -34,18 +55,32 @@ public class FuncionStreaming extends Funcion {
         return (double) espectadoresConectados / capacidadVirtual * 100;
     }
 
-    public String getEnlace() {
-        return enlace;
-    }
-    public int getCapacidadVirtual() {
-        return capacidadVirtual;
-    }
-    public int getEspectadoresConectados() {
-        return espectadoresConectados;
+    @Override
+    public double getPrecioBase() {
+        return PRECIO_BASE;
     }
 
     @Override
-    public String toString() {
-        return "Streaming - " + super.toString() + " - Enlace: " + enlace;
+    public boolean requiereButaca() {
+        return false;
+    }
+
+    @Override
+    public String getModalidad() {
+        return "Streaming";
+    }
+
+    @Override
+    public String getLugar() {
+        return enlace;
+    }
+
+    @Override
+    public String getEstadoOcupacion() {
+        return espectadoresConectados + " de " + capacidadVirtual + " conectados (sin butaca)";
+    }
+
+    public String getEnlace() {
+        return enlace;
     }
 }
