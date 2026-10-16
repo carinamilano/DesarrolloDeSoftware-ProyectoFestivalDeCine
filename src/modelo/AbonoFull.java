@@ -2,18 +2,13 @@ package modelo;
 
 public class AbonoFull extends Abono {
 
-    public AbonoFull(String codigo, Espectador espectador, TipoTarifa tarifa, double precio) {
-        super(codigo, espectador, tarifa, precio);
+    public AbonoFull(String codigo, Espectador espectador, TipoTarifa tarifa) {
+        super(codigo, espectador, tarifa, TipoAbono.FULL);
     }
 
     @Override
-    public boolean cubre(Funcion funcion) {
-        return funcion instanceof FuncionPresencial;
-    }
-
-    @Override
-    public String getTipo() {
-        return "Abono Full";
+    protected boolean cubrePresencial(FuncionPresencial funcion) {
+        return true;
     }
 
     @Override

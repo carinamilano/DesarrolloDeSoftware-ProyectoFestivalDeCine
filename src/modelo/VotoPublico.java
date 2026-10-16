@@ -1,14 +1,27 @@
 package modelo;
 
-public class VotoPublico {
-    private int puntaje;
-    private Pelicula pelicula;
-    private Espectador espectador;
+import excepciones.VotoInvalidoException;
 
-    public VotoPublico(int puntaje, Pelicula pelicula, Espectador espectador) {
+public class VotoPublico {
+    public static final int PUNTAJE_MINIMO = 1;
+    public static final int PUNTAJE_MAXIMO = 5;
+
+    private final int puntaje;
+    private final Pelicula pelicula;
+    private final Espectador espectador;
+
+    // Lo crea Pelicula.recibirVoto (Creator); la validación del puntaje vive acá (Experto)
+    VotoPublico(int puntaje, Pelicula pelicula, Espectador espectador) {
+        if (puntaje < PUNTAJE_MINIMO || puntaje > PUNTAJE_MAXIMO) {
+            throw new VotoInvalidoException("el puntaje debe estar entre 1 y 5.");
+        }
         this.puntaje = puntaje;
-        this.pelicula = pelicula;
-        this.espectador = espectador;
+        this.pelicula = Validar.presente(pelicula, "La película es obligatoria.");
+        this.espectador = Validar.presente(espectador, "El espectador es obligatorio.");
+    }
+
+    public boolean esDe(Espectador otro) {
+        return espectador == otro;
     }
 
     public int getPuntaje() { return puntaje; }

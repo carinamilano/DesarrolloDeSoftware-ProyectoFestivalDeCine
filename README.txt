@@ -23,17 +23,23 @@ ORGANIZACIÓN DEL PROYECTO
 --------------------------
 El proyecto está organizado en los siguientes paquetes:
 
-  modelo/         → Clases que representan las entidades del dominio
+  modelo/         → Entidades del dominio, con sus reglas de negocio
   excepciones/    → Excepciones personalizadas del sistema
-  servicios/      → Lógica de negocio del sistema
-  persistencia/   → Lectura y escritura de archivos
+  repositorio/    → Interfaz Repositorio<T>, su implementación en memoria
+                    y el Catalogo que reúne todos los datos
+  servicios/      → Coordinan los casos de uso (un servicio por tema)
+    precios/      → Tarifario y reglas de descuento (patrón Strategy)
+  persistencia/   → Interfaz Persistencia y su implementación en archivos
+  inicializacion/ → Precarga de datos de demostración
   ui/             → Interfaz gráfica (Swing)
+    comun/        → Componentes reutilizables: PanelListado, FormularioDialogo,
+                    DialogoPersona, LectorCampos y ComponentesUI
     peliculas/    → Paneles de gestión de películas, directores y actores
     funciones/    → Panel de gestión de funciones
     entradas/     → Paneles de venta de entradas, abonos y espectadores
     evaluaciones/ → Paneles de evaluaciones, ganadores y voto del público
     festival/     → Paneles de ediciones, secciones y salas
-  app/            → Clase Main (punto de entrada)
+  app/            → Clase Main (punto de entrada: arma y conecta las piezas)
 
 
 CLASES DEL MODELO
@@ -41,43 +47,66 @@ CLASES DEL MODELO
   - Festival, Edicion, Seccion, Premio
   - TipoSeccion (enum): COMPETENCIA_OFICIAL, CINE_INDEPENDIENTE,
     CORTOMETRAJE, NUEVOS_TALENTOS
-  - Persona (abstract) → Director, Actor, Jurado, Espectador
-  - Pelicula, Evaluacion
+  - Persona (abstract) → Artista (abstract) → Director, Actor
+                       → Jurado, Espectador
+  - Pelicula, Genero (enum), Evaluacion
   - Funcion (abstract) → FuncionPresencial, FuncionStreaming
   - Entrada (abstract) → EntradaPresencial, EntradaStreaming
   - Sala
   - Abono (abstract) → AbonoTresDias, AbonoFull, AbonoStreaming
+  - TipoAbono (enum): TRES_DIAS, FULL, STREAMING (con su precio base)
   - TipoTarifa (enum): GENERAL, ESTUDIANTE, JUBILADO
   - VotoPublico
+  - SolicitudEntrada (record): datos con los que se emite una entrada
+  - Numerador: números correlativos para los códigos
+  - Validar: validaciones de datos comunes
 
 
 SERVICIOS
 ---------
-La lógica de negocio está separada en tres servicios, respetando el
-principio de separación de responsabilidades. La lógica NO se resuelve
-en la UI ni en el Main.
+Las reglas de negocio viven en las clases del modelo (Experto en
+información): por ejemplo, Edicion valida su año y sus fechas,
+FuncionPresencial valida y ocupa la butaca, Abono decide si cubre una
+función y Pelicula controla que el voto sea de alguien con entrada.
+Los servicios coordinan cada caso de uso y dependen de la interfaz
+Repositorio, no de listas concretas. La lógica NO se resuelve en la UI
+ni en el Main.
+
+  SistemaFestival:
+    Crea los servicios y le da a cada uno solo los repositorios que usa.
+    La interfaz recibe este único objeto.
 
   FestivalServicio:
-    Gestiona el festival, ediciones, secciones (con su premio) y salas.
-    Asocia y quita películas de las secciones. No permite dos ediciones
-    del mismo año ni dos secciones del mismo tipo en una edición.
-    Una película compite en una sola edición (puede estar en varias
-    secciones de esa edición), así sus evaluaciones y votos cuentan solo
-    para los premios de esa edición.
+    Ediciones, secciones (con su premio) y salas. Asocia y quita
+    películas de las secciones. Una película compite en una sola edición
+    (puede estar en varias secciones de esa edición).
+
+  PersonaServicio:
+    Alta y búsqueda de directores, actores, jurados y espectadores.
 
   PeliculaServicio:
-    Gestiona películas, directores, actores, jurados, evaluaciones y
-    votos del público. Calcula promedios y determina películas ganadoras.
-    Valida el puntaje del jurado (0 a 10) y controla que una película
-    solo pueda eliminarse si no tiene funciones, evaluaciones ni votos.
+    Películas, reparto y eliminación de películas.
 
-  EntradaServicio:
-    Gestiona funciones presenciales y streaming, espectadores, venta de
-    entradas, abonos y reservas. Calcula precios y valida disponibilidad,
-    butacas y capacidades.
+  EvaluacionServicio:
+    Evaluaciones del jurado y voto del público.
 
-  InicializadorDatos:
-    Precarga datos iniciales al arrancar el sistema.
+  FuncionServicio:
+    Programación de funciones presenciales y streaming.
+
+  VentaServicio:
+    Venta de entradas sueltas. El precio lo calcula el Tarifario.
+
+  AbonoServicio:
+    Venta de abonos, reservas con abono y cancelación de reservas.
+
+  precios/Tarifario:
+    Aplica una lista de ReglaDescuento (DescuentoPorTarifa y
+    DescuentoCompraAnticipada). Para agregar un descuento nuevo alcanza
+    con escribir otra regla.
+
+  inicializacion/InicializadorDatos:
+    Ejecuta en orden un Inicializador por tipo de dato (ediciones,
+    secciones, reparto, funciones, entradas, abonos y votos).
 
 
 INTERFAZ GRÁFICA
@@ -179,7 +208,7 @@ Al iniciar el sistema se cargan automáticamente desde archivos:
   - 17 películas
   - 43 evaluaciones
 
-Y se inicializan via InicializadorDatos:
+Y se inicializan vía inicializacion/InicializadorDatos:
   - 3 ediciones (2024-Madrid, 2025-Paris, 2026-Buenos Aires)
   - 4 secciones por edición con sus premios
   - Asociaciones película-sección

@@ -1,112 +1,89 @@
 package servicios;
 
+import excepciones.EntidadNoEncontradaException;
 import excepciones.FestivalException;
 import modelo.*;
-import excepciones.EntidadNoEncontradaException;
+import repositorio.Repositorio;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
+// Ediciones, secciones (con su premio) y salas. Las reglas de cada una viven en el modelo
+// (Edicion valida año y fechas, Edicion no repite secciones, Festival no repite ediciones)
 public class FestivalServicio {
-    private Festival festival;
-    private List<Sala> salas;
+    private final Festival festival;
+    private final Repositorio<Sala> salas;
+    private final Repositorio<Pelicula> peliculas;
 
-    public FestivalServicio(Festival festival, List<Sala> salas) {
+    public FestivalServicio(Festival festival, Repositorio<Sala> salas, Repositorio<Pelicula> peliculas) {
         this.festival = festival;
         this.salas = salas;
+        this.peliculas = peliculas;
     }
 
-    public void registrarEdicion(int anio, String ciudad, LocalDate fechaInicio, LocalDate fechaFin) {
-        if (anio < 2000) {
-            throw new FestivalException("El año debe ser mayor a 2000.");
-        }
-        if (fechaFin.isBefore(fechaInicio)) {
-            throw new FestivalException("La fecha fin debe ser posterior a la fecha inicio.");
-        }
-        if (festival.buscarEdicion(anio) != null) {
-            throw new FestivalException("Ya existe la edición " + anio + ".");
-        }
+    public Edicion registrarEdicion(int anio, String ciudad, LocalDate fechaInicio, LocalDate fechaFin) {
         Edicion edicion = new Edicion(anio, ciudad, fechaInicio, fechaFin);
         festival.agregarEdicion(edicion);
+        return edicion;
     }
 
-    public void registrarSeccion(int anioEdicion, TipoSeccion tipo, Premio premio) {
-        Edicion edicion = buscarEdicion(anioEdicion);
-        if (edicion.buscarSeccion(tipo) != null) {
-            throw new FestivalException("La edición " + anioEdicion + " ya tiene la sección " + tipo + ".");
+    public Seccion registrarSeccion(int anioEdicion, TipoSeccion tipo, String nombrePremio, String descripcionPremio) {
+        Premio premio = new Premio(nombrePremio, descripcionPremio);
+        return buscarEdicion(anioEdicion).agregarSeccion(tipo, premio);
+    }
+
+    public Sala registrarSala(int numero, int capacidad) {
+        Sala sala = Sala.numerada(numero, capacidad);
+        if (salas.existe(otra -> otra.seLlama(sala.getNombre()))) {
+            throw new FestivalException("Ya existe la " + sala.getNombre() + ".");
         }
-        Seccion seccion = new Seccion(tipo, premio);
-        edicion.agregarSeccion(seccion);
+        salas.agregar(sala);
+        return sala;
     }
 
-    public void registrarSeccion(int anioEdicion, TipoSeccion tipo, String nombrePremio, String descripcionPremio) {
-        if (nombrePremio == null || nombrePremio.isBlank()) {
-            throw new FestivalException("El nombre del premio es obligatorio.");
-        }
-        registrarSeccion(anioEdicion, tipo, new Premio(nombrePremio, descripcionPremio));
-    }
-
-    public void registrarSala(String nombre, int capacidad) {
-        Sala sala = new Sala(nombre, capacidad);
-        salas.add(sala);
-    }
-
+    // Una película compite en una sola edición (puede estar en varias secciones de esa edición)
     public void asociarPeliculaASeccion(int anioEdicion, TipoSeccion tipo, Pelicula pelicula) {
         Seccion seccion = buscarSeccion(anioEdicion, tipo);
-        if (seccion.getPeliculas().contains(pelicula)) {
-            throw new FestivalException(pelicula.getTitulo() + " ya está en la sección " + tipo + ".");
-        }
-        // Una película compite en una sola edición (puede estar en varias secciones de esa edición)
-        Edicion otra = buscarEdicionDePelicula(pelicula);
-        if (otra != null && otra.getAnio() != anioEdicion) {
-            throw new FestivalException(pelicula.getTitulo() + " ya compite en la edición " + otra.getAnio() + ".");
+        Optional<Edicion> otraEdicion = buscarEdicionDePelicula(pelicula).filter(edicion -> edicion.getAnio() != anioEdicion);
+        if (otraEdicion.isPresent()) {
+            throw new FestivalException(pelicula.getTitulo() + " ya compite en la edición " + otraEdicion.get().getAnio() + ".");
         }
         seccion.agregarPelicula(pelicula);
     }
 
-    // Devuelve la edición en la que compite la película, o null si todavía no está en ninguna
-    public Edicion buscarEdicionDePelicula(Pelicula pelicula) {
-        for (Edicion e : festival.getEdiciones()) {
-            for (Seccion s : e.getSecciones()) {
-                if (s.getPeliculas().contains(pelicula)) return e;
-            }
-        }
-        return null;
-    }
-
     public void quitarPeliculaDeSeccion(int anioEdicion, TipoSeccion tipo, Pelicula pelicula) {
-        Seccion seccion = buscarSeccion(anioEdicion, tipo);
-        if (!seccion.getPeliculas().contains(pelicula)) {
+        if (!buscarSeccion(anioEdicion, tipo).quitarPelicula(pelicula)) {
             throw new FestivalException(pelicula.getTitulo() + " no está en la sección " + tipo + ".");
         }
-        seccion.eliminarPelicula(pelicula);
+    }
+
+    // Películas que se pueden sumar a la sección: no están en ella y no compiten en otra edición
+    public List<Pelicula> peliculasAsociables(Edicion edicion, Seccion seccion) {
+        return peliculas.listar().stream()
+                .filter(pelicula -> buscarEdicionDePelicula(pelicula).map(otra -> otra == edicion).orElse(true))
+                .filter(pelicula -> !seccion.contiene(pelicula))
+                .toList();
+    }
+
+    public Optional<Edicion> buscarEdicionDePelicula(Pelicula pelicula) {
+        return festival.buscarEdicionDe(pelicula);
     }
 
     public Edicion buscarEdicion(int anio) {
-        Edicion edicion = festival.buscarEdicion(anio);
-        if (edicion == null) {
-            throw new EntidadNoEncontradaException("Edicion", "anio: " + anio);
-        }
-        return edicion;
+        return festival.buscarEdicion(anio)
+                .orElseThrow(() -> new EntidadNoEncontradaException("Edicion", "anio: " + anio));
     }
 
     public Seccion buscarSeccion(int anioEdicion, TipoSeccion tipo) {
-        Edicion edicion = buscarEdicion(anioEdicion);
-        Seccion seccion = edicion.buscarSeccion(tipo);
-        if (seccion == null) {
-            throw new EntidadNoEncontradaException("Seccion", "tipo: " + tipo);
-        }
-        return seccion;
+        return buscarEdicion(anioEdicion).buscarSeccion(tipo)
+                .orElseThrow(() -> new EntidadNoEncontradaException("Seccion", "tipo: " + tipo));
     }
 
     public Sala buscarSala(String nombre) {
-        for (Sala s : salas) {
-            if (s.getNombre().equalsIgnoreCase(nombre)) return s;
-        }
-        throw new EntidadNoEncontradaException("Sala", "nombre: " + nombre);
+        return salas.obtener(sala -> sala.seLlama(nombre), "Sala", "nombre: " + nombre);
     }
 
-    public Festival getFestival() { return festival; }
-    public List<Sala> getSalas() { return salas; }
+    public List<Sala> getSalas() { return salas.listar(); }
     public List<Edicion> getEdiciones() { return festival.getEdiciones(); }
 }

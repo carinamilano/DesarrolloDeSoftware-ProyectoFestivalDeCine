@@ -1,151 +1,50 @@
 package servicios;
 
-import modelo.*;
-import excepciones.EntidadNoEncontradaException;
 import excepciones.FestivalException;
-import excepciones.VotoInvalidoException;
+import modelo.*;
+import repositorio.Repositorio;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class PeliculaServicio {
-    private List<Pelicula> peliculas;
-    private List<Director> directores;
-    private List<Actor> actores;
-    private List<Jurado> jurados;
-    private List<Evaluacion> evaluaciones;
-    private List<VotoPublico> votosPublico;
+    private final Repositorio<Pelicula> peliculas;
+    private final PersonaServicio personas;
+    private final Festival festival;
 
-    public PeliculaServicio() {
-        this.peliculas = new ArrayList<>();
-        this.directores = new ArrayList<>();
-        this.actores = new ArrayList<>();
-        this.jurados = new ArrayList<>();
-        this.evaluaciones = new ArrayList<>();
-        this.votosPublico = new ArrayList<>();
+    public PeliculaServicio(Repositorio<Pelicula> peliculas, PersonaServicio personas, Festival festival) {
+        this.peliculas = peliculas;
+        this.personas = personas;
+        this.festival = festival;
     }
 
-    public void registrarDirector(String nombre, String email, String nacionalidad) {
-        Director d = new Director(nombre, email, nacionalidad);
-        directores.add(d);
-    }
-
-    public void registrarActor(String nombre, String email, String nacionalidad) {
-        Actor a = new Actor(nombre, email, nacionalidad);
-        actores.add(a);
-    }
-
-    public void registrarPelicula(String titulo, String genero, int duracion, String nombreDirector) {
-        Director director = buscarDirector(nombreDirector);
-        Pelicula p = new Pelicula(titulo, genero, duracion, director);
-        director.agregarPelicula(p);
-        peliculas.add(p);
+    public Pelicula registrarPelicula(String titulo, Genero genero, int duracion, String nombreDirector) {
+        if (peliculas.existe(pelicula -> pelicula.seTitula(titulo))) {
+            throw new FestivalException("Ya existe la película " + titulo + ".");
+        }
+        Pelicula pelicula = new Pelicula(titulo, genero, duracion, personas.buscarDirector(nombreDirector));
+        peliculas.agregar(pelicula);
+        return pelicula;
     }
 
     public void asociarActorAPelicula(String nombreActor, String tituloPelicula) {
-        Actor actor = buscarActor(nombreActor);
-        Pelicula pelicula = buscarPelicula(tituloPelicula);
-        actor.agregarPelicula(pelicula);
-        pelicula.agregarActor(actor);
+        Actor actor = personas.buscarActor(nombreActor);
+        buscarPelicula(tituloPelicula).agregarActor(actor);
     }
 
-    public void registrarJurado(String nombre, String email, String nacionalidad) {
-        Jurado j = new Jurado(nombre, email, nacionalidad);
-        jurados.add(j);
-    }
-
-    // El jurado puntúa de 0 a 10.
-    public void registrarEvaluacion(String nombreJurado, String tituloPelicula, double puntaje) {
-        if (puntaje < 0 || puntaje > 10) {
-            throw new FestivalException("El puntaje debe estar entre 0 y 10.");
-        }
-        Jurado jurado = buscarJurado(nombreJurado);
-        Pelicula pelicula = buscarPelicula(tituloPelicula);
-        Evaluacion e = new Evaluacion(puntaje, pelicula, jurado);
-        jurado.agregarEvaluacion(e);
-        pelicula.agregarEvaluacion(e);
-        evaluaciones.add(e);
-    }
-
-    // El público vota de 1 a 5 estrellas. Solo puede votar quien tenga entrada para la película, una vez.
-    public void registrarVotoPublico(Espectador espectador, String tituloPelicula, int puntaje) {
-        Pelicula pelicula = buscarPelicula(tituloPelicula);
-        if (puntaje < 1 || puntaje > 5) {
-            throw new VotoInvalidoException("el puntaje debe estar entre 1 y 5.");
-        }
-        if (!espectador.tieneEntradaPara(pelicula)) {
-            throw new VotoInvalidoException(espectador.getNombre() + " no tiene entrada para " + pelicula.getTitulo() + ".");
-        }
-        if (pelicula.fueVotadaPor(espectador)) {
-            throw new VotoInvalidoException(espectador.getNombre() + " ya votó " + pelicula.getTitulo() + ".");
-        }
-        VotoPublico voto = new VotoPublico(puntaje, pelicula, espectador);
-        pelicula.agregarVotoPublico(voto);
-        votosPublico.add(voto);
-    }
-
-    // Solo se puede eliminar una película sin funciones, evaluaciones ni votos, para no dejar datos inconsistentes.
-    // Se la quita también de las secciones en las que participa y de su director y actores.
-    public void eliminarPelicula(String titulo, List<Edicion> ediciones) {
+    // La película valida si se puede eliminar; se la quita de sus secciones, de su director y de sus actores
+    public void eliminarPelicula(String titulo) {
         Pelicula pelicula = buscarPelicula(titulo);
-        if (!pelicula.getFunciones().isEmpty()) {
-            throw new FestivalException("No se puede eliminar " + titulo + ": tiene funciones programadas.");
-        }
-        if (!pelicula.getEvaluaciones().isEmpty() || !pelicula.getVotosPublico().isEmpty()) {
-            throw new FestivalException("No se puede eliminar " + titulo + ": tiene evaluaciones o votos registrados.");
-        }
-        for (Edicion e : ediciones) {
-            for (Seccion s : e.getSecciones()) {
-                s.eliminarPelicula(pelicula);
-            }
-        }
-        pelicula.getDirector().quitarPelicula(pelicula);
-        for (Actor a : pelicula.getActores()) {
-            a.quitarPelicula(pelicula);
-        }
-        peliculas.remove(pelicula);
-    }
-
-    public Pelicula determinarGanadoraPublico(Edicion edicion) {
-        return edicion.determinarGanadoraPublico();
-    }
-
-    public Pelicula determinarGanadora(Seccion seccion) {
-        return seccion.determinarGanadora();
-    }
-
-    public Director buscarDirector(String nombre) {
-        for (Director d : directores) {
-            if (d.getNombre().equalsIgnoreCase(nombre)) return d;
-        }
-        throw new EntidadNoEncontradaException("Director", "nombre: " + nombre);
-    }
-
-    public Actor buscarActor(String nombre) {
-        for (Actor a : actores) {
-            if (a.getNombre().equalsIgnoreCase(nombre)) return a;
-        }
-        throw new EntidadNoEncontradaException("Actor", "nombre: " + nombre);
-    }
-
-    public Jurado buscarJurado(String nombre) {
-        for (Jurado j : jurados) {
-            if (j.getNombre().equalsIgnoreCase(nombre)) return j;
-        }
-        throw new EntidadNoEncontradaException("Jurado", "nombre: " + nombre);
+        pelicula.validarEliminable();
+        festival.quitarPelicula(pelicula);
+        pelicula.desvincular();
+        peliculas.quitar(pelicula);
     }
 
     public Pelicula buscarPelicula(String titulo) {
-        for (Pelicula p : peliculas) {
-            if (p.getTitulo().equalsIgnoreCase(titulo)) return p;
-        }
-        throw new EntidadNoEncontradaException("Pelicula", "titulo: " + titulo);
+        return peliculas.obtener(pelicula -> pelicula.seTitula(titulo), "Pelicula", "titulo: " + titulo);
     }
 
-    public List<Pelicula> getPeliculas() { return peliculas; }
-    public List<Director> getDirectores() { return directores; }
-    public List<Actor> getActores() { return actores; }
-    public List<Jurado> getJurados() { return jurados; }
-    public List<Evaluacion> getEvaluaciones() { return evaluaciones; }
-    public List<VotoPublico> getVotosPublico() { return votosPublico; }
+    public List<Pelicula> getPeliculas() {
+        return peliculas.listar();
+    }
 }

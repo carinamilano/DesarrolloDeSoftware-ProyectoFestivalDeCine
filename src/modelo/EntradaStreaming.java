@@ -1,17 +1,29 @@
 package modelo;
 
 public class EntradaStreaming extends Entrada {
-    private String enlaceAcceso;
+    private final FuncionStreaming funcion;
 
-    public EntradaStreaming(String codigo, Funcion funcion, Espectador espectador, String enlaceAcceso, double precio, Abono abono) {
-        super(codigo, funcion, espectador, precio, abono);
-        this.enlaceAcceso = enlaceAcceso;
+    // La crea FuncionStreaming.emitirEntrada (Creator)
+    EntradaStreaming(String codigo, FuncionStreaming funcion, SolicitudEntrada solicitud) {
+        super(codigo, solicitud);
+        this.funcion = funcion;
     }
-
-    public String getEnlaceAcceso() { return enlaceAcceso; }
 
     @Override
-    public String toString() {
-        return super.toString() + " - Enlace: " + enlaceAcceso;
+    public FuncionStreaming getFuncion() {
+        return funcion;
     }
+
+    @Override
+    protected void liberarLugar() {
+        funcion.desconectarEspectador();
+    }
+
+    @Override
+    public String getDetalle() {
+        return "Enlace: " + getEnlaceAcceso();
+    }
+
+    // El enlace de acceso es el de la función: ya no se guarda una copia
+    public String getEnlaceAcceso() { return funcion.getEnlace(); }
 }

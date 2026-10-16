@@ -1,30 +1,38 @@
 package ui;
 
 import persistencia.Persistencia;
-import servicios.EntradaServicio;
-import servicios.FestivalServicio;
-import servicios.PeliculaServicio;
+import servicios.SistemaFestival;
+import ui.entradas.PanelAbonos;
+import ui.entradas.PanelEspectadores;
+import ui.entradas.PanelVentaEntradas;
+import ui.evaluaciones.PanelEvaluaciones;
+import ui.evaluaciones.PanelVotoPublico;
+import ui.festival.PanelEdiciones;
+import ui.festival.PanelSalas;
+import ui.festival.PanelSecciones;
+import ui.funciones.PanelFunciones;
+import ui.peliculas.PanelActores;
+import ui.peliculas.PanelDirectores;
+import ui.peliculas.PanelPeliculas;
+
 import javax.swing.*;
 import java.awt.*;
-import ui.festival.PanelEdiciones;
-import ui.entradas.PanelVentaEntradas;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.net.URL;
+import java.util.function.Supplier;
 
 public class VentanaPrincipal extends JFrame {
+    private static final Color COLOR_FONDO = new Color(245, 245, 245);
 
-    private FestivalServicio festivalServicio;
-    private PeliculaServicio peliculaServicio;
-    private EntradaServicio entradaServicio;
-    private Persistencia persistencia;
+    private final SistemaFestival sistema;
+    private final Persistencia persistencia;
     private JPanel panelCentral;
     private JLabel barraEstado;
 
-    public VentanaPrincipal(FestivalServicio festivalServicio,
-                            PeliculaServicio peliculaServicio,
-                            EntradaServicio entradaServicio,
-                            Persistencia persistencia) {
-        this.festivalServicio = festivalServicio;
-        this.peliculaServicio = peliculaServicio;
-        this.entradaServicio = entradaServicio;
+    // Depende de la abstracción Persistencia, no de cómo se guardan los datos (DIP)
+    public VentanaPrincipal(SistemaFestival sistema, Persistencia persistencia) {
+        this.sistema = sistema;
         this.persistencia = persistencia;
 
         configurarVentana();
@@ -39,9 +47,9 @@ public class VentanaPrincipal extends JFrame {
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        addWindowListener(new java.awt.event.WindowAdapter() {
+        addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
+            public void windowClosing(WindowEvent e) {
                 confirmarSalida();
             }
         });
@@ -50,130 +58,35 @@ public class VentanaPrincipal extends JFrame {
     private void construirBarraMenu() {
         JMenuBar menuBar = new JMenuBar();
 
-        // archivo
         JMenu menuArchivo = new JMenu("Archivo");
-
-        JMenuItem itemGuardar = new JMenuItem("Guardar datos");
-        itemGuardar.addActionListener(e -> guardarEnSegundoPlano());
-
-        JMenuItem itemSalir = new JMenuItem("Salir");
-        itemSalir.addActionListener(e -> confirmarSalida());
-
-        menuArchivo.add(itemGuardar);
+        menuArchivo.add(crearItem("Guardar datos", this::guardarEnSegundoPlano));
         menuArchivo.addSeparator();
-        menuArchivo.add(itemSalir);
+        menuArchivo.add(crearItem("Salir", this::confirmarSalida));
 
-        // festival
         JMenu menuFestival = new JMenu("Festival");
+        agregarOpcion(menuFestival, "Ediciones", "Gestión de ediciones", () -> new PanelEdiciones(this));
+        agregarOpcion(menuFestival, "Secciones", "Gestión de secciones", () -> new PanelSecciones(this));
+        agregarOpcion(menuFestival, "Salas", "Gestión de salas", () -> new PanelSalas(this));
 
-        JMenuItem itemEdiciones = new JMenuItem("Ediciones");
-        itemEdiciones.addActionListener(e -> {
-            mostrarPanel(new PanelEdiciones(this));
-            setEstado("Gestión de ediciones");
-        });
-
-        JMenuItem itemSecciones = new JMenuItem("Secciones");
-        itemSecciones.addActionListener(e -> {
-            mostrarPanel(new ui.festival.PanelSecciones(this));
-            setEstado("Gestión de secciones");
-        });
-
-        JMenuItem itemSalas = new JMenuItem("Salas");
-        itemSalas.addActionListener(e -> {
-            mostrarPanel(new ui.festival.PanelSalas(this));
-            setEstado("Gestión de salas");
-        });
-
-        menuFestival.add(itemEdiciones);
-        menuFestival.add(itemSecciones);
-        menuFestival.add(itemSalas);
-
-        // peliculas
         JMenu menuPeliculas = new JMenu("Películas");
+        agregarOpcion(menuPeliculas, "Gestionar películas", "Gestión de películas", () -> new PanelPeliculas(this));
+        agregarOpcion(menuPeliculas, "Directores", "Gestión de directores", () -> new PanelDirectores(this));
+        agregarOpcion(menuPeliculas, "Actores", "Gestión de actores", () -> new PanelActores(this));
 
-        JMenuItem itemPeliculas = new JMenuItem("Gestionar películas");
-        itemPeliculas.addActionListener(e -> {
-            mostrarPanel(new ui.peliculas.PanelPeliculas(this));
-            setEstado("Gestión de películas");
-        });
-
-        JMenuItem itemDirectores = new JMenuItem("Directores");
-        itemDirectores.addActionListener(e -> {
-            mostrarPanel(new ui.peliculas.PanelDirectores(this));
-            setEstado("Gestión de directores");
-        });
-
-        JMenuItem itemActores = new JMenuItem("Actores");
-        itemActores.addActionListener(e -> {
-            mostrarPanel(new ui.peliculas.PanelActores(this));
-            setEstado("Gestión de actores");
-        });
-
-        menuPeliculas.add(itemPeliculas);
-        menuPeliculas.add(itemDirectores);
-        menuPeliculas.add(itemActores);
-
-        // funciones
         JMenu menuFunciones = new JMenu("Funciones");
+        agregarOpcion(menuFunciones, "Gestionar funciones", "Gestión de funciones", () -> new PanelFunciones(this));
 
-        JMenuItem itemFunciones = new JMenuItem("Gestionar funciones");
-        itemFunciones.addActionListener(e -> {
-            mostrarPanel(new ui.funciones.PanelFunciones(this));
-            setEstado("Gestión de funciones");
-        });
-
-        menuFunciones.add(itemFunciones);
-
-        // entradas
         JMenu menuEntradas = new JMenu("Entradas");
+        agregarOpcion(menuEntradas, "Venta de entradas", "Venta de entradas", () -> new PanelVentaEntradas(this));
+        agregarOpcion(menuEntradas, "Abonos", "Abonos del festival", () -> new PanelAbonos(this));
+        agregarOpcion(menuEntradas, "Espectadores", "Gestión de espectadores", () -> new PanelEspectadores(this));
 
-        JMenuItem itemVentaEntradas = new JMenuItem("Venta de entradas");
-        itemVentaEntradas.addActionListener(e -> {
-            mostrarPanel(new PanelVentaEntradas(this));
-            setEstado("Venta de entradas");
-        });
-
-        JMenuItem itemEspectadores = new JMenuItem("Espectadores");
-        itemEspectadores.addActionListener(e -> {
-            mostrarPanel(new ui.entradas.PanelEspectadores(this));
-            setEstado("Gestión de espectadores");
-        });
-
-        JMenuItem itemAbonos = new JMenuItem("Abonos");
-        itemAbonos.addActionListener(e -> {
-            mostrarPanel(new ui.entradas.PanelAbonos(this));
-            setEstado("Abonos del festival");
-        });
-
-        menuEntradas.add(itemVentaEntradas);
-        menuEntradas.add(itemAbonos);
-        menuEntradas.add(itemEspectadores);
-
-        // evaluaciones
         JMenu menuEvaluaciones = new JMenu("Evaluaciones");
+        agregarOpcion(menuEvaluaciones, "Evaluaciones y ganadores", "Evaluaciones y ganadores", () -> new PanelEvaluaciones(this));
+        agregarOpcion(menuEvaluaciones, "Voto del público", "Voto del público", () -> new PanelVotoPublico(this));
 
-        JMenuItem itemEvaluaciones = new JMenuItem("Evaluaciones y ganadores");
-        itemEvaluaciones.addActionListener(e -> {
-            mostrarPanel(new ui.evaluaciones.PanelEvaluaciones(this));
-            setEstado("Evaluaciones y ganadores");
-        });
-
-        JMenuItem itemVotoPublico = new JMenuItem("Voto del público");
-        itemVotoPublico.addActionListener(e -> {
-            mostrarPanel(new ui.evaluaciones.PanelVotoPublico(this));
-            setEstado("Voto del público");
-        });
-
-        menuEvaluaciones.add(itemEvaluaciones);
-        menuEvaluaciones.add(itemVotoPublico);
-
-        // ayuda
         JMenu menuAyuda = new JMenu("Ayuda");
-
-        JMenuItem itemAcercaDe = new JMenuItem("Acerca de...");
-        itemAcercaDe.addActionListener(e -> mostrarAcercaDe());
-
-        menuAyuda.add(itemAcercaDe);
+        menuAyuda.add(crearItem("Acerca de...", this::mostrarAcercaDe));
 
         menuBar.add(menuArchivo);
         menuBar.add(menuFestival);
@@ -182,48 +95,40 @@ public class VentanaPrincipal extends JFrame {
         menuBar.add(menuEntradas);
         menuBar.add(menuEvaluaciones);
         menuBar.add(menuAyuda);
-
         setJMenuBar(menuBar);
+    }
+
+    private JMenuItem crearItem(String texto, Runnable accion) {
+        JMenuItem item = new JMenuItem(texto);
+        item.addActionListener(e -> accion.run());
+        return item;
+    }
+
+    // Cada opción del menú muestra un panel y actualiza la barra de estado (antes eran 12 bloques iguales)
+    private void agregarOpcion(JMenu menu, String texto, String estado, Supplier<JPanel> crearPanel) {
+        menu.add(crearItem(texto, () -> {
+            mostrarPanel(crearPanel.get());
+            setEstado(estado);
+        }));
     }
 
     private void construirPanelCentral() {
         panelCentral = new JPanel(new GridBagLayout());
-        panelCentral.setBackground(new Color(245, 245, 245));
+        panelCentral.setBackground(COLOR_FONDO);
 
         JPanel panelBienvenida = new JPanel();
         panelBienvenida.setLayout(new BoxLayout(panelBienvenida, BoxLayout.Y_AXIS));
-        panelBienvenida.setBackground(new Color(245, 245, 245));
+        panelBienvenida.setBackground(COLOR_FONDO);
 
-        // Imagen
-        JLabel labelImagen = new JLabel();
-        try {
-            java.net.URL imgUrl = getClass().getClassLoader().getResource("cine.jpg");
-            if (imgUrl != null) {
-                ImageIcon iconOriginal = new ImageIcon(imgUrl);
-                Image imgEscalada = iconOriginal.getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
-                labelImagen.setIcon(new ImageIcon(imgEscalada));
-            }
-        } catch (Exception e) {
-            System.out.println("No se pudo cargar la imagen: " + e.getMessage());
-        }
-        labelImagen.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel labelTitulo = new JLabel("Festival Internacional de Cine");
-        labelTitulo.setFont(new Font("SansSerif", Font.BOLD, 26));
-        labelTitulo.setForeground(new Color(30, 30, 30));
-        labelTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel labelSubtitulo = new JLabel("Sistema de Gestión");
-        labelSubtitulo.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        labelSubtitulo.setForeground(new Color(100, 100, 100));
-        labelSubtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel labelTitulo = crearEtiquetaCentrada("Festival Internacional de Cine", new Font("SansSerif", Font.BOLD, 26), new Color(30, 30, 30));
+        JLabel labelSubtitulo = crearEtiquetaCentrada("Sistema de Gestión", new Font("SansSerif", Font.PLAIN, 16), new Color(100, 100, 100));
 
         JSeparator separador = new JSeparator();
         separador.setMaximumSize(new Dimension(400, 2));
         separador.setForeground(new Color(180, 180, 180));
         separador.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        panelBienvenida.add(labelImagen);
+        panelBienvenida.add(crearImagen());
         panelBienvenida.add(Box.createRigidArea(new Dimension(0, 15)));
         panelBienvenida.add(labelTitulo);
         panelBienvenida.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -235,14 +140,31 @@ public class VentanaPrincipal extends JFrame {
         add(panelCentral, BorderLayout.CENTER);
     }
 
+    private JLabel crearImagen() {
+        JLabel labelImagen = new JLabel();
+        URL urlImagen = getClass().getClassLoader().getResource("cine.jpg");
+        if (urlImagen != null) {
+            Image imagen = new ImageIcon(urlImagen).getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
+            labelImagen.setIcon(new ImageIcon(imagen));
+        }
+        labelImagen.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return labelImagen;
+    }
+
+    private JLabel crearEtiquetaCentrada(String texto, Font fuente, Color color) {
+        JLabel etiqueta = new JLabel(texto);
+        etiqueta.setFont(fuente);
+        etiqueta.setForeground(color);
+        etiqueta.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return etiqueta;
+    }
+
     private void construirBarraEstado() {
         barraEstado = new JLabel(" Sistema listo.");
         barraEstado.setBorder(BorderFactory.createEtchedBorder());
         barraEstado.setFont(new Font("SansSerif", Font.PLAIN, 12));
         add(barraEstado, BorderLayout.SOUTH);
     }
-
-    // metodos paneles
 
     public void setEstado(String mensaje) {
         barraEstado.setText(" " + mensaje);
@@ -256,57 +178,34 @@ public class VentanaPrincipal extends JFrame {
         panelCentral.repaint();
     }
 
-    public FestivalServicio getFestivalServicio() { return festivalServicio; }
-    public PeliculaServicio getPeliculaServicio() { return peliculaServicio; }
-    public EntradaServicio getEntradaServicio() { return entradaServicio; }
+    public SistemaFestival getSistema() {
+        return sistema;
+    }
 
-    // thread para guardaren segundo plano
-
+    // Guarda en un hilo secundario para que la interfaz no se congele
     public void guardarEnSegundoPlano() {
         setEstado("Guardando datos...");
-
         Thread hiloGuardado = new Thread(() -> {
             try {
-                persistencia.guardarSalas(festivalServicio.getSalas());
-                persistencia.guardarDirectores(peliculaServicio.getDirectores());
-                persistencia.guardarActores(peliculaServicio.getActores());
-                persistencia.guardarJurados(peliculaServicio.getJurados());
-                persistencia.guardarEspectadores(entradaServicio.getEspectadores());
-                persistencia.guardarPeliculas(peliculaServicio.getPeliculas());
-                persistencia.guardarEvaluaciones(peliculaServicio.getEvaluaciones());
-
-                SwingUtilities.invokeLater(() ->
-                        setEstado("Datos guardados correctamente.")
-                );
+                persistencia.guardar();
+                SwingUtilities.invokeLater(() -> setEstado("Datos guardados correctamente."));
             } catch (Exception ex) {
-                SwingUtilities.invokeLater(() ->
-                        setEstado("Error al guardar: " + ex.getMessage())
-                );
+                SwingUtilities.invokeLater(() -> setEstado("Error al guardar: " + ex.getMessage()));
             }
         });
-
         hiloGuardado.start();
     }
 
-    // dialogos
-
     private void mostrarAcercaDe() {
-        JOptionPane.showMessageDialog(
-                this,
+        JOptionPane.showMessageDialog(this,
                 "Sistema de Gestión de Festival de Cine\nVersión 2.0\nDesarrollado con Java Swing\n\n© 2026 - Milano, Carina Victoria",
-                "Acerca de",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+                "Acerca de", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void confirmarSalida() {
-        int opcion = JOptionPane.showConfirmDialog(
-                this,
-                "¿Desea guardar los datos antes de salir?",
-                "Confirmar salida",
-                JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-        );
+        int opcion = JOptionPane.showConfirmDialog(this,
+                "¿Desea guardar los datos antes de salir?", "Confirmar salida",
+                JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (opcion == JOptionPane.YES_OPTION) {
             guardarEnSegundoPlano();
             dispose();
