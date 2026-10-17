@@ -1,0 +1,5 @@
+Pedro Martinez,pedro@cine.com,Argentina
+Laura Gomez,laura@cine.com,Argentina
+Roberto Silva,roberto@cine.com,Uruguay
+Claudia Reyes,claudia@cine.com,Chile
+Fernando Castro,fernando@cine.com,Colombia

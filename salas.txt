@@ -1,0 +1,5 @@
+Sala 1,100
+Sala 2,80
+Sala 3,50
+Sala 4,120
+Sala 5,60

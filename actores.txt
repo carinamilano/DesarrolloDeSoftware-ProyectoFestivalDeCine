@@ -1,0 +1,10 @@
+Robert De Niro,deniro@cine.com,Americana
+Al Pacino,pacino@cine.com,Americana
+Cate Blanchett,cate@cine.com,Australiana
+Leonardo DiCaprio,leo@cine.com,Americana
+Meryl Streep,meryl@cine.com,Americana
+Joaquin Phoenix,joaquin@cine.com,Americana
+Margot Robbie,margot@cine.com,Australiana
+Timothee Chalamet,timo@cine.com,Americana
+Emma Stone,emma@cine.com,Americana
+Ryan Gosling,ryan@cine.com,Canadiense
