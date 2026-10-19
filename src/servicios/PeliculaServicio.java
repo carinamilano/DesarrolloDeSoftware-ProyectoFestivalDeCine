@@ -1,34 +1,36 @@
 package servicios;
 
-import excepciones.FestivalException;
-import modelo.*;
+import excepciones.EntidadDuplicadaException;
+import modelo.comun.Validar;
+import modelo.festival.Festival;
+import modelo.peliculas.Genero;
+import modelo.peliculas.Pelicula;
+import modelo.personas.Actor;
+import modelo.personas.Director;
 import repositorio.Repositorio;
 
 import java.util.List;
 
 public class PeliculaServicio {
     private final Repositorio<Pelicula> peliculas;
-    private final PersonaServicio personas;
     private final Festival festival;
 
-    public PeliculaServicio(Repositorio<Pelicula> peliculas, PersonaServicio personas, Festival festival) {
+    public PeliculaServicio(Repositorio<Pelicula> peliculas, Festival festival) {
         this.peliculas = peliculas;
-        this.personas = personas;
         this.festival = festival;
     }
 
-    public Pelicula registrarPelicula(String titulo, Genero genero, int duracion, String nombreDirector) {
+    public Pelicula registrarPelicula(String titulo, Genero genero, int duracion, Director director) {
         if (peliculas.existe(pelicula -> pelicula.seTitula(titulo))) {
-            throw new FestivalException("Ya existe la película " + titulo + ".");
+            throw new EntidadDuplicadaException("Ya existe la película " + titulo + ".");
         }
-        Pelicula pelicula = new Pelicula(titulo, genero, duracion, personas.buscarDirector(nombreDirector));
+        Pelicula pelicula = new Pelicula(titulo, genero, duracion, director);
         peliculas.agregar(pelicula);
         return pelicula;
     }
 
-    public void asociarActorAPelicula(String nombreActor, String tituloPelicula) {
-        Actor actor = personas.buscarActor(nombreActor);
-        buscarPelicula(tituloPelicula).agregarActor(actor);
+    public void asociarActorAPelicula(Actor actor, Pelicula pelicula) {
+        Validar.presente(pelicula, "La película es obligatoria.").agregarActor(actor);
     }
 
     // La película valida si se puede eliminar; se la quita de sus secciones, de su director y de sus actores

@@ -1,7 +1,7 @@
 package ui.peliculas;
 
-import modelo.Actor;
-import modelo.Pelicula;
+import modelo.peliculas.Pelicula;
+import modelo.personas.Actor;
 import servicios.PeliculaServicio;
 import servicios.PersonaServicio;
 import ui.VentanaPrincipal;
@@ -9,14 +9,19 @@ import ui.comun.ComponentesUI;
 import ui.comun.DialogoPersona;
 import ui.comun.FormularioDialogo;
 import ui.comun.PanelListado;
+import ui.comun.SelectorPersona;
 
 import javax.swing.JComboBox;
 import java.util.List;
 
 public class PanelActores extends PanelListado {
+    private final PersonaServicio personaServicio;
+    private final PeliculaServicio peliculaServicio;
 
-    public PanelActores(VentanaPrincipal ventana) {
+    public PanelActores(VentanaPrincipal ventana, PersonaServicio personaServicio, PeliculaServicio peliculaServicio) {
         super(ventana, "Gestión de Actores", "Nombre", "Email", "Nacionalidad", "Películas");
+        this.personaServicio = personaServicio;
+        this.peliculaServicio = peliculaServicio;
         agregarBotones(
                 ComponentesUI.crearBoton("Agregar actor", this::agregarActor),
                 ComponentesUI.crearBoton("Asociar actor a película", this::asociarActorAPelicula));
@@ -25,40 +30,39 @@ public class PanelActores extends PanelListado {
 
     @Override
     protected List<Object[]> obtenerFilas() {
-        return getSistema().getPersonaServicio().getActores().stream()
+        return personaServicio.getActores().stream()
                 .map(actor -> new Object[]{
                         actor.getNombre(), actor.getEmail(), actor.getNacionalidad(), actor.cantidadPeliculas()})
                 .toList();
     }
 
     private void agregarActor() {
-        String nombre = DialogoPersona.mostrar(getVentana(), "Agregar actor",
-                getSistema().getPersonaServicio()::registrarActor);
-        if (nombre == null) return;
-        recargar();
-        getVentana().setEstado("Actor agregado: " + nombre);
+        DialogoPersona.mostrar(getVentana(), "Agregar actor", personaServicio::registrarActor)
+                .ifPresent(actor -> {
+                    recargar();
+                    getVentana().setEstado("Actor agregado: " + actor.getNombre());
+                });
     }
 
     private void asociarActorAPelicula() {
-        PersonaServicio personas = getSistema().getPersonaServicio();
-        PeliculaServicio peliculas = getSistema().getPeliculaServicio();
-        if (personas.getActores().isEmpty() || peliculas.getPeliculas().isEmpty()) {
+        List<Actor> actores = personaServicio.getActores();
+        List<Pelicula> peliculas = peliculaServicio.getPeliculas();
+        if (actores.isEmpty() || peliculas.isEmpty()) {
             ComponentesUI.avisar(getVentana(), "Se necesitan actores y películas registrados.");
             return;
         }
 
-        FormularioDialogo formulario = new FormularioDialogo(getVentana(), "Asociar actor a película", 400, 220);
-        JComboBox<String> comboActor = formulario.agregarCampo("Actor:", new JComboBox<>(
-                personas.getActores().stream().map(Actor::getNombre).toArray(String[]::new)));
-        JComboBox<String> comboPelicula = formulario.agregarCampo("Película:", new JComboBox<>(
-                peliculas.getPeliculas().stream().map(Pelicula::getTitulo).toArray(String[]::new)));
+        FormularioDialogo formulario = new FormularioDialogo(getVentana(), "Asociar actor a película", 460, 220);
+        JComboBox<Actor> comboActor = formulario.agregarCampo("Actor:", SelectorPersona.crearCombo(actores));
+        JComboBox<Pelicula> comboPelicula = formulario.agregarCampo("Película:",
+                ComponentesUI.crearCombo(peliculas, Pelicula::getTitulo));
 
         formulario.alAceptar(() -> {
-            String nombreActor = (String) comboActor.getSelectedItem();
-            String tituloPelicula = (String) comboPelicula.getSelectedItem();
-            peliculas.asociarActorAPelicula(nombreActor, tituloPelicula);
+            Actor actor = ComponentesUI.seleccionado(comboActor);
+            Pelicula pelicula = ComponentesUI.seleccionado(comboPelicula);
+            peliculaServicio.asociarActorAPelicula(actor, pelicula);
             recargar();
-            getVentana().setEstado("Actor " + nombreActor + " asociado a " + tituloPelicula);
+            getVentana().setEstado("Actor " + actor.getNombre() + " asociado a " + pelicula.getTitulo());
             formulario.cerrar();
         });
         formulario.mostrar();

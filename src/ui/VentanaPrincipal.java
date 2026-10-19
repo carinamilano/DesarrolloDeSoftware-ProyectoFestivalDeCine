@@ -1,7 +1,9 @@
 package ui;
 
+import excepciones.PersistenciaException;
 import persistencia.Persistencia;
 import servicios.SistemaFestival;
+import ui.comun.ComponentesUI;
 import ui.entradas.PanelAbonos;
 import ui.entradas.PanelEspectadores;
 import ui.entradas.PanelVentaEntradas;
@@ -20,6 +22,9 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class VentanaPrincipal extends JFrame {
@@ -27,6 +32,13 @@ public class VentanaPrincipal extends JFrame {
 
     private final SistemaFestival sistema;
     private final Persistencia persistencia;
+    // Un solo hilo de guardado: si se guarda dos veces seguidas, los guardados se escriben en orden.
+    // Es daemon para que no impida que el programa termine
+    private final ExecutorService hiloGuardado = Executors.newSingleThreadExecutor(tarea -> {
+        Thread hilo = new Thread(tarea, "guardado-de-datos");
+        hilo.setDaemon(true);
+        return hilo;
+    });
     private JPanel panelCentral;
     private JLabel barraEstado;
 
@@ -55,6 +67,8 @@ public class VentanaPrincipal extends JFrame {
         });
     }
 
+    // Esta clase es la única que conoce a SistemaFestival: a cada panel le pasa solo los servicios que usa
+    // (antes los paneles hacían ventana.getSistema().getXServicio())
     private void construirBarraMenu() {
         JMenuBar menuBar = new JMenuBar();
 
@@ -64,26 +78,42 @@ public class VentanaPrincipal extends JFrame {
         menuArchivo.add(crearItem("Salir", this::confirmarSalida));
 
         JMenu menuFestival = new JMenu("Festival");
-        agregarOpcion(menuFestival, "Ediciones", "Gestión de ediciones", () -> new PanelEdiciones(this));
-        agregarOpcion(menuFestival, "Secciones", "Gestión de secciones", () -> new PanelSecciones(this));
-        agregarOpcion(menuFestival, "Salas", "Gestión de salas", () -> new PanelSalas(this));
+        agregarOpcion(menuFestival, "Ediciones", "Gestión de ediciones",
+                () -> new PanelEdiciones(this, sistema.getFestivalServicio()));
+        agregarOpcion(menuFestival, "Secciones", "Gestión de secciones",
+                () -> new PanelSecciones(this, sistema.getFestivalServicio()));
+        agregarOpcion(menuFestival, "Salas", "Gestión de salas",
+                () -> new PanelSalas(this, sistema.getFestivalServicio()));
 
         JMenu menuPeliculas = new JMenu("Películas");
-        agregarOpcion(menuPeliculas, "Gestionar películas", "Gestión de películas", () -> new PanelPeliculas(this));
-        agregarOpcion(menuPeliculas, "Directores", "Gestión de directores", () -> new PanelDirectores(this));
-        agregarOpcion(menuPeliculas, "Actores", "Gestión de actores", () -> new PanelActores(this));
+        agregarOpcion(menuPeliculas, "Gestionar películas", "Gestión de películas",
+                () -> new PanelPeliculas(this, sistema.getPeliculaServicio(), sistema.getPersonaServicio()));
+        agregarOpcion(menuPeliculas, "Directores", "Gestión de directores",
+                () -> new PanelDirectores(this, sistema.getPersonaServicio()));
+        agregarOpcion(menuPeliculas, "Actores", "Gestión de actores",
+                () -> new PanelActores(this, sistema.getPersonaServicio(), sistema.getPeliculaServicio()));
 
         JMenu menuFunciones = new JMenu("Funciones");
-        agregarOpcion(menuFunciones, "Gestionar funciones", "Gestión de funciones", () -> new PanelFunciones(this));
+        agregarOpcion(menuFunciones, "Gestionar funciones", "Gestión de funciones",
+                () -> new PanelFunciones(this, sistema.getFuncionServicio(), sistema.getFestivalServicio()));
 
         JMenu menuEntradas = new JMenu("Entradas");
-        agregarOpcion(menuEntradas, "Venta de entradas", "Venta de entradas", () -> new PanelVentaEntradas(this));
-        agregarOpcion(menuEntradas, "Abonos", "Abonos del festival", () -> new PanelAbonos(this));
-        agregarOpcion(menuEntradas, "Espectadores", "Gestión de espectadores", () -> new PanelEspectadores(this));
+        agregarOpcion(menuEntradas, "Venta de entradas", "Venta de entradas",
+                () -> new PanelVentaEntradas(this, sistema.getVentaServicio(), sistema.getFuncionServicio(),
+                        sistema.getPersonaServicio()));
+        agregarOpcion(menuEntradas, "Abonos", "Abonos del festival",
+                () -> new PanelAbonos(this, sistema.getAbonoServicio(), sistema.getFuncionServicio(),
+                        sistema.getPersonaServicio()));
+        agregarOpcion(menuEntradas, "Espectadores", "Gestión de espectadores",
+                () -> new PanelEspectadores(this, sistema.getPersonaServicio()));
 
         JMenu menuEvaluaciones = new JMenu("Evaluaciones");
-        agregarOpcion(menuEvaluaciones, "Evaluaciones y ganadores", "Evaluaciones y ganadores", () -> new PanelEvaluaciones(this));
-        agregarOpcion(menuEvaluaciones, "Voto del público", "Voto del público", () -> new PanelVotoPublico(this));
+        agregarOpcion(menuEvaluaciones, "Evaluaciones y ganadores", "Evaluaciones y ganadores",
+                () -> new PanelEvaluaciones(this, sistema.getEvaluacionServicio(), sistema.getPeliculaServicio(),
+                        sistema.getPersonaServicio(), sistema.getFestivalServicio()));
+        agregarOpcion(menuEvaluaciones, "Voto del público", "Voto del público",
+                () -> new PanelVotoPublico(this, sistema.getEvaluacionServicio(), sistema.getPeliculaServicio(),
+                        sistema.getPersonaServicio(), sistema.getFestivalServicio()));
 
         JMenu menuAyuda = new JMenu("Ayuda");
         menuAyuda.add(crearItem("Acerca de...", this::mostrarAcercaDe));
@@ -104,7 +134,7 @@ public class VentanaPrincipal extends JFrame {
         return item;
     }
 
-    // Cada opción del menú muestra un panel y actualiza la barra de estado (antes eran 12 bloques iguales)
+    // Cada opción del menú muestra un panel y actualiza la barra de estado
     private void agregarOpcion(JMenu menu, String texto, String estado, Supplier<JPanel> crearPanel) {
         menu.add(crearItem(texto, () -> {
             mostrarPanel(crearPanel.get());
@@ -178,22 +208,27 @@ public class VentanaPrincipal extends JFrame {
         panelCentral.repaint();
     }
 
-    public SistemaFestival getSistema() {
-        return sistema;
+    // ========== GUARDADO ==========
+
+    public void guardarEnSegundoPlano() {
+        guardar(() -> setEstado("Datos guardados correctamente."),
+                ex -> setEstado("Error al guardar: " + ex.getMessage()));
     }
 
-    // Guarda en un hilo secundario para que la interfaz no se congele
-    public void guardarEnSegundoPlano() {
+    // La copia de los datos se toma acá, en el hilo de la UI (el único que modifica el modelo);
+    // el hilo de guardado solo escribe esa copia. Antes el hilo leía las listas del modelo
+    // mientras la UI las podía estar modificando
+    private void guardar(Runnable alTerminar, Consumer<PersistenciaException> alFallar) {
         setEstado("Guardando datos...");
-        Thread hiloGuardado = new Thread(() -> {
+        Persistencia.Guardado guardado = persistencia.prepararGuardado();
+        hiloGuardado.execute(() -> {
             try {
-                persistencia.guardar();
-                SwingUtilities.invokeLater(() -> setEstado("Datos guardados correctamente."));
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> setEstado("Error al guardar: " + ex.getMessage()));
+                guardado.escribir();
+                SwingUtilities.invokeLater(alTerminar);
+            } catch (PersistenciaException ex) {
+                SwingUtilities.invokeLater(() -> alFallar.accept(ex));
             }
         });
-        hiloGuardado.start();
     }
 
     private void mostrarAcercaDe() {
@@ -202,16 +237,33 @@ public class VentanaPrincipal extends JFrame {
                 "Acerca de", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    // Si se elige guardar, la ventana espera a que termine el guardado y, si falló, lo avisa
+    // y pregunta si salir igual (antes se cerraba sin esperar y el error no se veía)
     private void confirmarSalida() {
         int opcion = JOptionPane.showConfirmDialog(this,
                 "¿Desea guardar los datos antes de salir?", "Confirmar salida",
                 JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (opcion == JOptionPane.YES_OPTION) {
-            guardarEnSegundoPlano();
-            dispose();
+            setEnabled(false);
+            guardar(this::salir, this::avisarErrorAlSalir);
         } else if (opcion == JOptionPane.NO_OPTION) {
-            dispose();
+            salir();
         }
         // cancel no hace nada, vuelve a la app
+    }
+
+    private void avisarErrorAlSalir(PersistenciaException ex) {
+        setEnabled(true);
+        setEstado("Error al guardar: " + ex.getMessage());
+        boolean salirIgual = ComponentesUI.confirmar(this,
+                "No se pudieron guardar los datos:\n" + String.join("\n", ex.getErrores())
+                        + "\n\n¿Desea salir de todos modos? Se perderán los cambios no guardados.",
+                "Error al guardar");
+        if (salirIgual) salir();
+    }
+
+    private void salir() {
+        hiloGuardado.shutdown();
+        dispose();
     }
 }

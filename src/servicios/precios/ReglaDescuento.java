@@ -1,11 +1,12 @@
 package servicios.precios;
 
-import modelo.Funcion;
-import modelo.TipoTarifa;
+import modelo.funciones.Funcion;
+import modelo.precios.Dinero;
+import modelo.precios.TipoTarifa;
 
-// Strategy: cada regla de descuento es intercambiable. Agregar un descuento nuevo
+// Strategy: cada regla de descuento de entradas es intercambiable. Agregar un descuento nuevo
 // es escribir otra clase, sin modificar el Tarifario (OCP)
 public interface ReglaDescuento {
 
-    double aplicar(double precio, Funcion funcion, TipoTarifa tarifa);
+    Dinero aplicar(Dinero precio, Funcion funcion, TipoTarifa tarifa);
 }

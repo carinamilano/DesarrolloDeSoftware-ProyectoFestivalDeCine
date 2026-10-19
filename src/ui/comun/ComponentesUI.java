@@ -1,10 +1,14 @@
 package ui.comun;
 
+import modelo.precios.Dinero;
+
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
+import java.util.function.Function;
 
 // Piezas de interfaz que antes se construían copiando las mismas líneas en cada panel
 public final class ComponentesUI {
@@ -44,6 +48,29 @@ public final class ComponentesUI {
         return tabla;
     }
 
+    // Combo que guarda los objetos del modelo y muestra el texto indicado.
+    // Antes los combos guardaban nombres (String) y después se volvía a buscar el objeto por nombre
+    public static <T> JComboBox<T> crearCombo(List<? extends T> elementos, Function<? super T, String> texto) {
+        JComboBox<T> combo = new JComboBox<>();
+        elementos.forEach(combo::addItem);
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public Component getListCellRendererComponent(JList<?> lista, Object valor, int indice,
+                                                          boolean seleccionado, boolean conFoco) {
+                super.getListCellRendererComponent(lista, valor, indice, seleccionado, conFoco);
+                if (valor != null) setText(texto.apply((T) valor));
+                return this;
+            }
+        });
+        return combo;
+    }
+
+    // Elemento elegido en el combo, ya con su tipo (o null si no hay ninguno)
+    public static <T> T seleccionado(JComboBox<T> combo) {
+        return combo.getItemAt(combo.getSelectedIndex());
+    }
+
     public static JPanel crearPanelConBorde(String titulo, JComponent contenido) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createTitledBorder(titulo));
@@ -81,8 +108,8 @@ public final class ComponentesUI {
         });
     }
 
-    public static String formatearPrecio(double precio) {
-        return String.format("$ %.2f", precio);
+    public static String formatearPrecio(Dinero precio) {
+        return String.format("$ %.2f", precio.getMonto());
     }
 
     public static void avisar(Component padre, String mensaje) {

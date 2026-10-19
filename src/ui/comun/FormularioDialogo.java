@@ -1,5 +1,7 @@
 package ui.comun;
 
+import excepciones.FestivalException;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -7,9 +9,11 @@ import java.awt.*;
 // Antes cada panel armaba esto a mano (unas 25 líneas iguales por diálogo)
 public class FormularioDialogo {
 
+    // Solo puede fallar por un campo mal escrito (checked) o por una regla del dominio (FestivalException).
+    // Antes declaraba "throws Exception" y se atrapaba cualquier error, incluso los de programación
     @FunctionalInterface
     public interface Accion {
-        void ejecutar() throws Exception;
+        void ejecutar() throws CampoInvalidoException;
     }
 
     private final JDialog dialogo;
@@ -84,7 +88,7 @@ public class FormularioDialogo {
         } catch (CampoInvalidoException ex) {
             mostrarError(ex.getMessage());
             ex.getCampo().requestFocus();
-        } catch (Exception ex) {
+        } catch (FestivalException ex) {
             mostrarError("Error: " + ex.getMessage());
         }
     }

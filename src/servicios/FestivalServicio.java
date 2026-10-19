@@ -1,8 +1,15 @@
 package servicios;
 
+import excepciones.EntidadDuplicadaException;
 import excepciones.EntidadNoEncontradaException;
-import excepciones.FestivalException;
-import modelo.*;
+import excepciones.ReglaNegocioException;
+import modelo.festival.Edicion;
+import modelo.festival.Festival;
+import modelo.festival.Premio;
+import modelo.festival.Sala;
+import modelo.festival.Seccion;
+import modelo.festival.TipoSeccion;
+import modelo.peliculas.Pelicula;
 import repositorio.Repositorio;
 
 import java.time.LocalDate;
@@ -35,8 +42,8 @@ public class FestivalServicio {
 
     public Sala registrarSala(int numero, int capacidad) {
         Sala sala = Sala.numerada(numero, capacidad);
-        if (salas.existe(otra -> otra.seLlama(sala.getNombre()))) {
-            throw new FestivalException("Ya existe la " + sala.getNombre() + ".");
+        if (salas.existe(sala::equals)) {
+            throw new EntidadDuplicadaException("Ya existe la " + sala.getNombre() + ".");
         }
         salas.agregar(sala);
         return sala;
@@ -47,21 +54,20 @@ public class FestivalServicio {
         Seccion seccion = buscarSeccion(anioEdicion, tipo);
         Optional<Edicion> otraEdicion = buscarEdicionDePelicula(pelicula).filter(edicion -> edicion.getAnio() != anioEdicion);
         if (otraEdicion.isPresent()) {
-            throw new FestivalException(pelicula.getTitulo() + " ya compite en la edición " + otraEdicion.get().getAnio() + ".");
+            throw new ReglaNegocioException(pelicula.getTitulo() + " ya compite en la edición " + otraEdicion.get().getAnio() + ".");
         }
         seccion.agregarPelicula(pelicula);
     }
 
+    // Edicion controla que una película con funciones no deje de competir en ella
     public void quitarPeliculaDeSeccion(int anioEdicion, TipoSeccion tipo, Pelicula pelicula) {
-        if (!buscarSeccion(anioEdicion, tipo).quitarPelicula(pelicula)) {
-            throw new FestivalException(pelicula.getTitulo() + " no está en la sección " + tipo + ".");
-        }
+        buscarEdicion(anioEdicion).quitarDeSeccion(tipo, pelicula);
     }
 
     // Películas que se pueden sumar a la sección: no están en ella y no compiten en otra edición
     public List<Pelicula> peliculasAsociables(Edicion edicion, Seccion seccion) {
         return peliculas.listar().stream()
-                .filter(pelicula -> buscarEdicionDePelicula(pelicula).map(otra -> otra == edicion).orElse(true))
+                .filter(pelicula -> buscarEdicionDePelicula(pelicula).map(otra -> otra.equals(edicion)).orElse(true))
                 .filter(pelicula -> !seccion.contiene(pelicula))
                 .toList();
     }

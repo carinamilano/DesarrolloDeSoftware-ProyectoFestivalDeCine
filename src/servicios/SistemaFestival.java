@@ -1,11 +1,13 @@
 package servicios;
 
-import modelo.Numerador;
+import modelo.comun.Numerador;
 import repositorio.Catalogo;
 import servicios.precios.Tarifario;
 
+import java.time.Clock;
+
 // Arma los servicios y le reparte a cada uno solo los repositorios que necesita.
-// La UI recibe este único objeto en vez de una lista larga de servicios
+// El reloj se recibe desde afuera (Main usa el del sistema; una prueba puede pasar uno fijo)
 public class SistemaFestival {
     private final PersonaServicio personaServicio;
     private final PeliculaServicio peliculaServicio;
@@ -15,16 +17,18 @@ public class SistemaFestival {
     private final AbonoServicio abonoServicio;
     private final EvaluacionServicio evaluacionServicio;
 
-    public SistemaFestival(Catalogo catalogo) {
-        Numerador numerador = new Numerador();
+    public SistemaFestival(Catalogo catalogo, Clock reloj) {
+        Numerador numerador = catalogo.getNumerador();
+        Tarifario tarifario = new Tarifario(reloj);
         personaServicio = new PersonaServicio(catalogo.getDirectores(), catalogo.getActores(),
                 catalogo.getJurados(), catalogo.getEspectadores());
-        peliculaServicio = new PeliculaServicio(catalogo.getPeliculas(), personaServicio, catalogo.getFestival());
+        peliculaServicio = new PeliculaServicio(catalogo.getPeliculas(), catalogo.getFestival());
         festivalServicio = new FestivalServicio(catalogo.getFestival(), catalogo.getSalas(), catalogo.getPeliculas());
-        funcionServicio = new FuncionServicio(catalogo.getFuncionesPresenciales(), catalogo.getFuncionesStreaming());
-        ventaServicio = new VentaServicio(catalogo.getEntradas(), personaServicio, new Tarifario(), numerador);
-        abonoServicio = new AbonoServicio(catalogo.getAbonos(), personaServicio, funcionServicio, ventaServicio, numerador);
-        evaluacionServicio = new EvaluacionServicio(personaServicio, peliculaServicio);
+        funcionServicio = new FuncionServicio(catalogo.getFuncionesPresenciales(), catalogo.getFuncionesStreaming(),
+                catalogo.getFestival(), numerador, reloj);
+        ventaServicio = new VentaServicio(catalogo.getEntradas(), tarifario, numerador);
+        abonoServicio = new AbonoServicio(catalogo.getAbonos(), funcionServicio, ventaServicio, tarifario, numerador, reloj);
+        evaluacionServicio = new EvaluacionServicio(peliculaServicio);
     }
 
     public PersonaServicio getPersonaServicio() { return personaServicio; }

@@ -1,11 +1,14 @@
 package inicializacion;
 
-import modelo.Funcion;
-import modelo.TipoTarifa;
+import modelo.funciones.Butaca;
+import modelo.funciones.Funcion;
+import modelo.precios.TipoTarifa;
 import servicios.FuncionServicio;
 import servicios.PersonaServicio;
 import servicios.SistemaFestival;
 import servicios.VentaServicio;
+
+import java.util.Optional;
 
 // Algunas entradas vendidas para demostrar la ocupación
 class InicializadorEntradas implements Inicializador {
@@ -13,12 +16,14 @@ class InicializadorEntradas implements Inicializador {
     private final FuncionServicio funcionServicio;
     private final PersonaServicio personaServicio;
     private final CalendarioDemo calendario;
+    private final PersonasDemo personas;
 
-    InicializadorEntradas(SistemaFestival sistema, CalendarioDemo calendario) {
+    InicializadorEntradas(SistemaFestival sistema, CalendarioDemo calendario, PersonasDemo personas) {
         this.ventaServicio = sistema.getVentaServicio();
         this.funcionServicio = sistema.getFuncionServicio();
         this.personaServicio = sistema.getPersonaServicio();
         this.calendario = calendario;
+        this.personas = personas;
     }
 
     @Override
@@ -44,18 +49,19 @@ class InicializadorEntradas implements Inicializador {
     }
 
     // Vende butacas consecutivas desde primeraButaca, una por espectador
-    private void venderPresencial(String titulo, int diasDesdeHoy, int hora, int primeraButaca, String... espectadores) {
-        Funcion funcion = calendario.funcion(titulo, diasDesdeHoy, hora);
+    private void venderPresencial(String titulo, int diasDesdeBase, int hora, int primeraButaca, String... espectadores) {
+        Funcion funcion = calendario.funcion(titulo, diasDesdeBase, hora);
         int butaca = primeraButaca;
         for (String espectador : espectadores) {
-            ventaServicio.venderEntrada(espectador, funcion, TipoTarifa.GENERAL, butaca++);
+            ventaServicio.venderEntrada(personas.espectador(espectador), funcion, TipoTarifa.GENERAL,
+                    Optional.of(new Butaca(butaca++)));
         }
     }
 
-    private void venderStreaming(String titulo, int diasDesdeHoy, int hora, String... espectadores) {
-        Funcion funcion = calendario.funcion(titulo, diasDesdeHoy, hora);
+    private void venderStreaming(String titulo, int diasDesdeBase, int hora, String... espectadores) {
+        Funcion funcion = calendario.funcion(titulo, diasDesdeBase, hora);
         for (String espectador : espectadores) {
-            ventaServicio.venderEntrada(espectador, funcion, TipoTarifa.GENERAL);
+            ventaServicio.venderEntrada(personas.espectador(espectador), funcion, TipoTarifa.GENERAL, Optional.empty());
         }
     }
 }
