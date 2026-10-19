@@ -1,10 +1,16 @@
 package ui.evaluaciones;
 
-import modelo.*;
-import servicios.SistemaFestival;
+import modelo.festival.Edicion;
+import modelo.peliculas.Pelicula;
+import modelo.personas.Espectador;
+import servicios.EvaluacionServicio;
+import servicios.FestivalServicio;
+import servicios.PeliculaServicio;
+import servicios.PersonaServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
 import ui.comun.FormularioDialogo;
+import ui.comun.SelectorPersona;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -13,13 +19,20 @@ import java.util.List;
 
 public class PanelVotoPublico extends JPanel {
     private final VentanaPrincipal ventana;
-    private final SistemaFestival sistema;
+    private final EvaluacionServicio evaluacionServicio;
+    private final PeliculaServicio peliculaServicio;
+    private final PersonaServicio personaServicio;
+    private final FestivalServicio festivalServicio;
     private final DefaultTableModel modeloVotos;
     private final JTextArea areaPremio;
 
-    public PanelVotoPublico(VentanaPrincipal ventana) {
+    public PanelVotoPublico(VentanaPrincipal ventana, EvaluacionServicio evaluacionServicio, PeliculaServicio peliculaServicio,
+                            PersonaServicio personaServicio, FestivalServicio festivalServicio) {
         this.ventana = ventana;
-        this.sistema = ventana.getSistema();
+        this.evaluacionServicio = evaluacionServicio;
+        this.peliculaServicio = peliculaServicio;
+        this.personaServicio = personaServicio;
+        this.festivalServicio = festivalServicio;
         ComponentesUI.configurarPanel(this);
 
         modeloVotos = ComponentesUI.crearModeloTabla("Película", "Edición", "Votos", "Promedio (1-5)");
@@ -41,10 +54,10 @@ public class PanelVotoPublico extends JPanel {
 
     private void cargarVotos() {
         modeloVotos.setRowCount(0);
-        for (Pelicula pelicula : sistema.getPeliculaServicio().getPeliculas()) {
+        for (Pelicula pelicula : peliculaServicio.getPeliculas()) {
             modeloVotos.addRow(new Object[]{
                     pelicula.getTitulo(),
-                    sistema.getFestivalServicio().buscarEdicionDePelicula(pelicula).map(Edicion::toString).orElse("-"),
+                    festivalServicio.buscarEdicionDePelicula(pelicula).map(Edicion::toString).orElse("-"),
                     pelicula.cantidadVotos(),
                     pelicula.tieneVotos() ? String.format("%.2f", pelicula.calcularPromedioPublico()) : "-"
             });
@@ -52,8 +65,8 @@ public class PanelVotoPublico extends JPanel {
     }
 
     private void registrarVoto() {
-        List<Espectador> espectadores = sistema.getPersonaServicio().getEspectadores();
-        List<Edicion> ediciones = sistema.getFestivalServicio().getEdiciones();
+        List<Espectador> espectadores = personaServicio.getEspectadores();
+        List<Edicion> ediciones = festivalServicio.getEdiciones();
         if (espectadores.isEmpty()) {
             ComponentesUI.avisar(ventana, "No hay espectadores registrados.");
             return;
@@ -63,12 +76,12 @@ public class PanelVotoPublico extends JPanel {
             return;
         }
 
-        FormularioDialogo formulario = new FormularioDialogo(ventana, "Registrar voto del público", 520, 330);
+        FormularioDialogo formulario = new FormularioDialogo(ventana, "Registrar voto del público", 540, 330);
         formulario.setTextoAceptar("Votar");
         JComboBox<Edicion> comboEdicion = formulario.agregarCampo("Edición:", new JComboBox<>(ediciones.toArray(new Edicion[0])));
-        JComboBox<String> comboEspectador = formulario.agregarCampo("Espectador:", new JComboBox<>(
-                espectadores.stream().map(Espectador::getNombre).toArray(String[]::new)));
-        JComboBox<String> comboPelicula = formulario.agregarCampo("Película:", new JComboBox<>());
+        JComboBox<Espectador> comboEspectador = formulario.agregarCampo("Espectador:", SelectorPersona.crearCombo(espectadores));
+        JComboBox<Pelicula> comboPelicula = formulario.agregarCampo("Película:",
+                ComponentesUI.crearCombo(List.<Pelicula>of(), Pelicula::getTitulo));
         JComboBox<Integer> comboPuntaje = formulario.agregarCampo("Puntaje (estrellas):", new JComboBox<>(new Integer[]{5, 4, 3, 2, 1}));
         comboEdicion.setSelectedIndex(ediciones.size() - 1); // la edición más reciente
 
@@ -77,13 +90,13 @@ public class PanelVotoPublico extends JPanel {
         labelAyuda.setBorder(BorderFactory.createEmptyBorder(5, 20, 0, 20));
         formulario.agregarDebajo(labelAyuda);
 
-        // Qué películas puede votar lo decide el servicio (antes este recorrido estaba en la UI)
+        // Qué películas puede votar lo decide el servicio
         Runnable actualizarPeliculas = () -> {
-            Edicion edicion = (Edicion) comboEdicion.getSelectedItem();
-            Espectador espectador = espectadores.get(comboEspectador.getSelectedIndex());
-            List<Pelicula> votables = sistema.getEvaluacionServicio().peliculasParaVotar(espectador, edicion);
+            Edicion edicion = ComponentesUI.seleccionado(comboEdicion);
+            Espectador espectador = ComponentesUI.seleccionado(comboEspectador);
+            List<Pelicula> votables = evaluacionServicio.peliculasParaVotar(espectador, edicion);
             comboPelicula.removeAllItems();
-            votables.forEach(pelicula -> comboPelicula.addItem(pelicula.getTitulo()));
+            votables.forEach(comboPelicula::addItem);
             if (votables.isEmpty()) {
                 labelAyuda.setForeground(ComponentesUI.COLOR_AVISO);
                 labelAyuda.setText("<html>" + espectador.getNombre() + " no tiene películas para votar en la edición "
@@ -99,23 +112,23 @@ public class PanelVotoPublico extends JPanel {
         actualizarPeliculas.run();
 
         formulario.alAceptar(() -> {
-            String titulo = (String) comboPelicula.getSelectedItem();
-            if (titulo == null) {
+            Pelicula pelicula = ComponentesUI.seleccionado(comboPelicula);
+            if (pelicula == null) {
                 formulario.mostrarError("No hay película para votar con esta edición y espectador.");
                 return;
             }
-            String nombreEspectador = (String) comboEspectador.getSelectedItem();
-            sistema.getEvaluacionServicio().registrarVotoPublico(nombreEspectador, titulo, (Integer) comboPuntaje.getSelectedItem());
+            Espectador espectador = ComponentesUI.seleccionado(comboEspectador);
+            evaluacionServicio.registrarVotoPublico(espectador, pelicula, ComponentesUI.seleccionado(comboPuntaje));
             cargarVotos();
             mostrarPremioPublico();
-            ventana.setEstado("Voto registrado: " + nombreEspectador + " → " + titulo);
+            ventana.setEstado("Voto registrado: " + espectador.getNombre() + " → " + pelicula.getTitulo());
             formulario.cerrar();
         });
         formulario.mostrar();
     }
 
     private void mostrarPremioPublico() {
-        List<Edicion> ediciones = sistema.getFestivalServicio().getEdiciones();
+        List<Edicion> ediciones = festivalServicio.getEdiciones();
         if (ediciones.isEmpty()) {
             areaPremio.setText("No hay ediciones registradas.");
             return;

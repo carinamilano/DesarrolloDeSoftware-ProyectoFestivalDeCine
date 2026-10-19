@@ -6,15 +6,15 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-// Único lugar que abre archivos y maneja IOException (antes el try/catch estaba copiado 14 veces)
-class ArchivoTexto {
-    private static final String SEPARADOR = ",";
-
+// Único lugar que abre archivos y maneja IOException
+final class ArchivoTexto {
     private final Path ruta;
     private final String entidad;
 
@@ -23,32 +23,44 @@ class ArchivoTexto {
         this.entidad = entidad;
     }
 
-    List<String[]> leerRegistros() throws PersistenciaException {
-        List<String[]> registros = new ArrayList<>();
+    List<Registro> leerRegistros() throws PersistenciaException {
+        List<Registro> registros = new ArrayList<>();
         if (!Files.exists(ruta)) return registros;
         try (BufferedReader lector = Files.newBufferedReader(ruta, StandardCharsets.UTF_8)) {
             String linea;
+            int numeroLinea = 0;
             while ((linea = lector.readLine()) != null) {
-                if (!linea.isBlank()) registros.add(linea.split(SEPARADOR));
+                numeroLinea++;
+                if (!linea.isBlank()) registros.add(new Registro(entidad, numeroLinea, linea));
             }
         } catch (IOException ex) {
-            throw new PersistenciaException("Error al cargar " + entidad + ".");
+            throw new PersistenciaException("Error al cargar " + entidad + ": " + ex.getMessage());
         }
         return registros;
     }
 
+    // Escribe en un archivo temporal y después lo reemplaza: si algo falla a mitad de camino,
+    // el archivo anterior queda intacto
     void escribirRegistros(List<List<String>> registros) throws PersistenciaException {
-        try (BufferedWriter escritor = Files.newBufferedWriter(ruta, StandardCharsets.UTF_8)) {
-            for (List<String> campos : registros) {
-                escritor.write(String.join(SEPARADOR, campos));
-                escritor.newLine();
+        Path temporal = ruta.resolveSibling(ruta.getFileName() + ".tmp");
+        try {
+            try (BufferedWriter escritor = Files.newBufferedWriter(temporal, StandardCharsets.UTF_8)) {
+                for (List<String> campos : registros) {
+                    escritor.write(FormatoCsv.unir(campos));
+                    escritor.newLine();
+                }
             }
+            reemplazar(temporal, ruta);
         } catch (IOException ex) {
-            throw new PersistenciaException("Error al guardar " + entidad + ".");
+            throw new PersistenciaException("Error al guardar " + entidad + ": " + ex.getMessage());
         }
     }
 
-    String getEntidad() {
-        return entidad;
+    private static void reemplazar(Path origen, Path destino) throws IOException {
+        try {
+            Files.move(origen, destino, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException ex) {
+            Files.move(origen, destino, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 }

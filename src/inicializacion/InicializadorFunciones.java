@@ -5,7 +5,7 @@ import servicios.FuncionServicio;
 import servicios.PeliculaServicio;
 import servicios.SistemaFestival;
 
-// 14 funciones presenciales y 6 streaming, a partir de 7 días desde hoy
+// 14 funciones presenciales y 6 streaming, entre 7 y 16 días después de la fecha base
 class InicializadorFunciones implements Inicializador {
     private final FuncionServicio funcionServicio;
     private final PeliculaServicio peliculaServicio;
@@ -48,13 +48,13 @@ class InicializadorFunciones implements Inicializador {
         streaming("La La Land", "https://stream.festival.com/lalaland2", 400, 16, 21);
     }
 
-    private void presencial(String titulo, String sala, int diasDesdeHoy, int hora) {
+    private void presencial(String titulo, String sala, int diasDesdeBase, int hora) {
         funcionServicio.programarFuncionPresencial(peliculaServicio.buscarPelicula(titulo),
-                festivalServicio.buscarSala(sala), calendario.momento(diasDesdeHoy, hora));
+                festivalServicio.buscarSala(sala), calendario.momento(diasDesdeBase, hora));
     }
 
-    private void streaming(String titulo, String enlace, int capacidad, int diasDesdeHoy, int hora) {
+    private void streaming(String titulo, String enlace, int capacidad, int diasDesdeBase, int hora) {
         funcionServicio.programarFuncionStreaming(peliculaServicio.buscarPelicula(titulo),
-                enlace, capacidad, calendario.momento(diasDesdeHoy, hora));
+                enlace, capacidad, calendario.momento(diasDesdeBase, hora));
     }
 }

@@ -1,12 +1,16 @@
 package servicios;
 
-import excepciones.FestivalException;
-import modelo.*;
+import excepciones.EntidadDuplicadaException;
+import modelo.personas.Actor;
+import modelo.personas.Director;
+import modelo.personas.Espectador;
+import modelo.personas.Jurado;
+import modelo.personas.Persona;
 import repositorio.Repositorio;
 
 import java.util.List;
 
-// Alta y búsqueda de las personas del sistema (antes repartido entre PeliculaServicio y EntradaServicio)
+// Alta y búsqueda de las personas del sistema
 public class PersonaServicio {
     private final Repositorio<Director> directores;
     private final Repositorio<Actor> actores;
@@ -37,33 +41,33 @@ public class PersonaServicio {
         return registrar(espectadores, new Espectador(nombre, email, nacionalidad));
     }
 
-    // Las personas se buscan por nombre, así que no puede haber dos con el mismo nombre y rol
+    // Las personas se identifican por email: puede haber dos con el mismo nombre, pero no con el mismo email
     private <T extends Persona> T registrar(Repositorio<T> repositorio, T persona) {
-        if (repositorio.existe(otra -> otra.seLlama(persona.getNombre()))) {
-            throw new FestivalException("Ya existe " + persona + ".");
+        if (repositorio.existe(persona::equals)) {
+            throw new EntidadDuplicadaException("Ya hay alguien registrado con el email " + persona.getEmail() + ".");
         }
         repositorio.agregar(persona);
         return persona;
     }
 
-    public Director buscarDirector(String nombre) {
-        return buscar(directores, nombre, "Director");
+    public Director buscarDirector(String email) {
+        return buscar(directores, email, "Director");
     }
 
-    public Actor buscarActor(String nombre) {
-        return buscar(actores, nombre, "Actor");
+    public Actor buscarActor(String email) {
+        return buscar(actores, email, "Actor");
     }
 
-    public Jurado buscarJurado(String nombre) {
-        return buscar(jurados, nombre, "Jurado");
+    public Jurado buscarJurado(String email) {
+        return buscar(jurados, email, "Jurado");
     }
 
-    public Espectador buscarEspectador(String nombre) {
-        return buscar(espectadores, nombre, "Espectador");
+    public Espectador buscarEspectador(String email) {
+        return buscar(espectadores, email, "Espectador");
     }
 
-    private <T extends Persona> T buscar(Repositorio<T> repositorio, String nombre, String entidad) {
-        return repositorio.obtener(persona -> persona.seLlama(nombre), entidad, "nombre: " + nombre);
+    private <T extends Persona> T buscar(Repositorio<T> repositorio, String email, String entidad) {
+        return repositorio.obtener(persona -> persona.tieneEmail(email), entidad, "email: " + email);
     }
 
     public List<Director> getDirectores() { return directores.listar(); }

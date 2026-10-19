@@ -1,31 +1,42 @@
 package ui.evaluaciones;
 
-import modelo.*;
-import servicios.SistemaFestival;
+import modelo.festival.Edicion;
+import modelo.festival.Seccion;
+import modelo.peliculas.Evaluacion;
+import modelo.peliculas.Pelicula;
+import modelo.personas.Jurado;
+import servicios.EvaluacionServicio;
+import servicios.FestivalServicio;
+import servicios.PeliculaServicio;
+import servicios.PersonaServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
 import ui.comun.DialogoPersona;
 import ui.comun.FormularioDialogo;
 import ui.comun.LectorCampos;
+import ui.comun.SelectorPersona;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 public class PanelEvaluaciones extends JPanel {
-    private static final String NUEVO_JURADO = "-- Nuevo jurado --";
-
     private final VentanaPrincipal ventana;
-    private final SistemaFestival sistema;
+    private final EvaluacionServicio evaluacionServicio;
+    private final PeliculaServicio peliculaServicio;
+    private final PersonaServicio personaServicio;
+    private final FestivalServicio festivalServicio;
     private final DefaultTableModel modeloEvaluaciones;
     private final JTextArea areaGanadores;
 
-    public PanelEvaluaciones(VentanaPrincipal ventana) {
+    public PanelEvaluaciones(VentanaPrincipal ventana, EvaluacionServicio evaluacionServicio, PeliculaServicio peliculaServicio,
+                             PersonaServicio personaServicio, FestivalServicio festivalServicio) {
         this.ventana = ventana;
-        this.sistema = ventana.getSistema();
+        this.evaluacionServicio = evaluacionServicio;
+        this.peliculaServicio = peliculaServicio;
+        this.personaServicio = personaServicio;
+        this.festivalServicio = festivalServicio;
         ComponentesUI.configurarPanel(this);
 
         modeloEvaluaciones = ComponentesUI.crearModeloTabla("Película", "Jurado", "Puntaje");
@@ -49,7 +60,7 @@ public class PanelEvaluaciones extends JPanel {
 
     private void cargarEvaluaciones() {
         modeloEvaluaciones.setRowCount(0);
-        for (Evaluacion evaluacion : sistema.getEvaluacionServicio().getEvaluaciones()) {
+        for (Evaluacion evaluacion : evaluacionServicio.getEvaluaciones()) {
             modeloEvaluaciones.addRow(new Object[]{
                     evaluacion.getTituloPelicula(),
                     evaluacion.getNombreJurado(),
@@ -59,47 +70,43 @@ public class PanelEvaluaciones extends JPanel {
     }
 
     private void agregarEvaluacion() {
-        List<Pelicula> peliculas = sistema.getPeliculaServicio().getPeliculas();
+        List<Pelicula> peliculas = peliculaServicio.getPeliculas();
         if (peliculas.isEmpty()) {
             ComponentesUI.avisar(ventana, "Se necesitan películas registradas.");
             return;
         }
-        // El combo de jurados tiene la opción "Nuevo jurado" al principio
-        String[] opcionesJurado = Stream.concat(Stream.of(NUEVO_JURADO),
-                sistema.getPersonaServicio().getJurados().stream().map(Jurado::getNombre)).toArray(String[]::new);
 
-        FormularioDialogo formulario = new FormularioDialogo(ventana, "Agregar evaluación", 400, 260);
-        JComboBox<String> comboPelicula = formulario.agregarCampo("Película:", new JComboBox<>(
-                peliculas.stream().map(Pelicula::getTitulo).toArray(String[]::new)));
-        JComboBox<String> comboJurado = formulario.agregarCampo("Jurado:", new JComboBox<>(opcionesJurado));
+        FormularioDialogo formulario = new FormularioDialogo(ventana, "Agregar evaluación", 500, 260);
+        JComboBox<Pelicula> comboPelicula = formulario.agregarCampo("Película:",
+                ComponentesUI.crearCombo(peliculas, Pelicula::getTitulo));
+        // Jurados existentes y un botón "Nuevo..." (antes había una opción "-- Nuevo jurado --" mezclada con los nombres)
+        JComboBox<Jurado> comboJurado = SelectorPersona.crearCombo(personaServicio.getJurados());
+        formulario.agregarCampo("Jurado:", SelectorPersona.conBotonNuevo(comboJurado, "Dar de alta un jurado nuevo",
+                () -> DialogoPersona.mostrar(formulario.getDialogo(), "Nuevo jurado", personaServicio::registrarJurado)));
         JTextField campoPuntaje = formulario.agregarCampo("Puntaje (0-10):", new JTextField());
         formulario.encadenarEnter(campoPuntaje);
 
+        // Que un jurado evalúe una película una sola vez lo controla Pelicula
         formulario.alAceptar(() -> {
+            Jurado jurado = ComponentesUI.seleccionado(comboJurado);
+            if (jurado == null) {
+                formulario.mostrarError("Elija un jurado o dé de alta uno nuevo.");
+                return;
+            }
             double puntaje = LectorCampos.decimal(campoPuntaje,
                     "El puntaje es obligatorio.", "El puntaje debe ser un número. Ej: 8.5");
-            Optional<String> jurado = elegirJurado(formulario, (String) comboJurado.getSelectedItem());
-            if (jurado.isEmpty()) return; // canceló el alta del nuevo jurado
-
-            String tituloPelicula = (String) comboPelicula.getSelectedItem();
-            sistema.getEvaluacionServicio().registrarEvaluacion(jurado.get(), tituloPelicula, puntaje);
+            Pelicula pelicula = ComponentesUI.seleccionado(comboPelicula);
+            evaluacionServicio.registrarEvaluacion(jurado, pelicula, puntaje);
             cargarEvaluaciones();
             mostrarGanadores();
-            ventana.setEstado("Evaluación agregada para: " + tituloPelicula);
+            ventana.setEstado("Evaluación agregada para: " + pelicula.getTitulo());
             formulario.cerrar();
         });
         formulario.mostrar();
     }
 
-    // Si se eligió "Nuevo jurado" se piden sus datos (mismo diálogo que el resto de las personas)
-    private Optional<String> elegirJurado(FormularioDialogo formulario, String seleccion) {
-        if (!NUEVO_JURADO.equals(seleccion)) return Optional.of(seleccion);
-        return Optional.ofNullable(DialogoPersona.mostrar(formulario.getDialogo(), "Nuevo jurado",
-                sistema.getPersonaServicio()::registrarJurado));
-    }
-
     private void mostrarGanadores() {
-        List<Edicion> ediciones = sistema.getFestivalServicio().getEdiciones();
+        List<Edicion> ediciones = festivalServicio.getEdiciones();
         if (ediciones.isEmpty()) {
             areaGanadores.setText("No hay ediciones registradas.");
             return;

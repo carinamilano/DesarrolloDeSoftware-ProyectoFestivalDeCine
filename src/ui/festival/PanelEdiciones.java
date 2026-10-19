@@ -1,5 +1,6 @@
 package ui.festival;
 
+import servicios.FestivalServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
 import ui.comun.FormularioDialogo;
@@ -11,16 +12,18 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class PanelEdiciones extends PanelListado {
+    private final FestivalServicio festivalServicio;
 
-    public PanelEdiciones(VentanaPrincipal ventana) {
+    public PanelEdiciones(VentanaPrincipal ventana, FestivalServicio festivalServicio) {
         super(ventana, "Gestión de Ediciones", "Año", "Ciudad", "Fecha inicio (AAAA-MM-DD)", "Fecha fin (AAAA-MM-DD)");
+        this.festivalServicio = festivalServicio;
         agregarBotones(ComponentesUI.crearBoton("Agregar edición", this::agregarEdicion));
         recargar();
     }
 
     @Override
     protected List<Object[]> obtenerFilas() {
-        return getSistema().getFestivalServicio().getEdiciones().stream()
+        return festivalServicio.getEdiciones().stream()
                 .map(edicion -> new Object[]{
                         edicion.getAnio(), edicion.getCiudad(),
                         edicion.getFechaInicio().toString(), edicion.getFechaFin().toString()})
@@ -41,7 +44,7 @@ public class PanelEdiciones extends PanelListado {
             String ciudad = LectorCampos.texto(campoCiudad, "La ciudad es obligatoria.");
             LocalDate fechaInicio = LectorCampos.fecha(campoFechaInicio, "La fecha de inicio es obligatoria.");
             LocalDate fechaFin = LectorCampos.fecha(campoFechaFin, "La fecha fin es obligatoria.");
-            getSistema().getFestivalServicio().registrarEdicion(anio, ciudad, fechaInicio, fechaFin);
+            festivalServicio.registrarEdicion(anio, ciudad, fechaInicio, fechaFin);
             recargar();
             getVentana().setEstado("Edición agregada: " + anio + " - " + ciudad);
             formulario.cerrar();

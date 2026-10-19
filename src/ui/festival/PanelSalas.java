@@ -1,6 +1,7 @@
 package ui.festival;
 
-import modelo.Sala;
+import modelo.festival.Sala;
+import servicios.FestivalServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
 import ui.comun.FormularioDialogo;
@@ -12,9 +13,11 @@ import javax.swing.JTextField;
 import java.util.List;
 
 public class PanelSalas extends PanelListado {
+    private final FestivalServicio festivalServicio;
 
-    public PanelSalas(VentanaPrincipal ventana) {
+    public PanelSalas(VentanaPrincipal ventana, FestivalServicio festivalServicio) {
         super(ventana, "Gestión de Salas", "Nombre", "Capacidad");
+        this.festivalServicio = festivalServicio;
         // Columnas más chicas
         getTabla().setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         getTabla().getColumnModel().getColumn(0).setPreferredWidth(200);
@@ -25,7 +28,7 @@ public class PanelSalas extends PanelListado {
 
     @Override
     protected List<Object[]> obtenerFilas() {
-        return getSistema().getFestivalServicio().getSalas().stream()
+        return festivalServicio.getSalas().stream()
                 .map(sala -> new Object[]{sala.getNombre(), sala.getCantidadButacas()})
                 .toList();
     }
@@ -41,8 +44,8 @@ public class PanelSalas extends PanelListado {
                     "El número de sala es obligatorio.", "El número de sala debe ser un entero.");
             int capacidad = LectorCampos.entero(campoCapacidad,
                     "La capacidad es obligatoria.", "La capacidad debe ser un número entero.");
-            // El servicio arma el nombre "Sala N" y controla que no se repita (antes lo hacía la UI)
-            Sala sala = getSistema().getFestivalServicio().registrarSala(numero, capacidad);
+            // El servicio arma el nombre "Sala N" y controla que no se repita
+            Sala sala = festivalServicio.registrarSala(numero, capacidad);
             recargar();
             getVentana().setEstado("Sala agregada: " + sala.getNombre());
             formulario.cerrar();

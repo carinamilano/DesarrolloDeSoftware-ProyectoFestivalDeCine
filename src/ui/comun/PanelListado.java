@@ -1,6 +1,5 @@
 package ui.comun;
 
-import servicios.SistemaFestival;
 import ui.VentanaPrincipal;
 
 import javax.swing.*;
@@ -11,7 +10,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 // Template Method para los paneles "título + buscador + tabla + botones"
-// (ediciones, salas, películas, directores, actores y espectadores repetían las mismas ~45 líneas)
+// (ediciones, salas, películas, directores, actores y espectadores repetían las mismas ~45 líneas).
+// Cada panel concreto recibe en su constructor solo los servicios que usa
 public abstract class PanelListado extends JPanel {
     private final VentanaPrincipal ventana;
     private final DefaultTableModel modeloTabla;
@@ -55,10 +55,6 @@ public abstract class PanelListado extends JPanel {
 
     protected final VentanaPrincipal getVentana() {
         return ventana;
-    }
-
-    protected final SistemaFestival getSistema() {
-        return ventana.getSistema();
     }
 
     protected final JTable getTabla() {

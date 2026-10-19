@@ -1,17 +1,17 @@
-The Irishman,Drama,209,Martin Scorsese
-Roma,Drama,135,Alfonso Cuaron
-Tar,Drama,158,Todd Field
-Oppenheimer,Drama,180,Christopher Nolan
-Volver,Drama,121,Pedro Almodovar
-Parasite,Thriller,132,Bong Joon Ho
-Barbie,Comedia,114,Greta Gerwig
-The Grand Budapest Hotel,Comedia,99,Wes Anderson
-Dune,Ciencia Ficcion,155,Denis Villeneuve
-La La Land,Musical,128,Damien Chazelle
-Dolor y gloria,Drama,113,Pedro Almodovar
-Moonrise Kingdom,Comedia,94,Wes Anderson
-Whiplash,Drama,106,Damien Chazelle
-Lady Bird,Comedia,94,Greta Gerwig
-Interstellar,Ciencia Ficcion,169,Christopher Nolan
-Gravity,Ciencia Ficcion,91,Alfonso Cuaron
-Arrival,Ciencia Ficcion,116,Denis Villeneuve
+The Irishman,Drama,209,martin@cine.com
+Roma,Drama,135,alfonso@cine.com
+Tar,Drama,158,todd@cine.com
+Oppenheimer,Drama,180,nolan@cine.com
+Volver,Drama,121,almodovar@cine.com
+Parasite,Thriller,132,bong@cine.com
+Barbie,Comedia,114,greta@cine.com
+The Grand Budapest Hotel,Comedia,99,wes@cine.com
+Dune,Ciencia Ficcion,155,denis@cine.com
+La La Land,Musical,128,damien@cine.com
+Dolor y gloria,Drama,113,almodovar@cine.com
+Moonrise Kingdom,Comedia,94,wes@cine.com
+Whiplash,Drama,106,damien@cine.com
+Lady Bird,Comedia,94,greta@cine.com
+Interstellar,Ciencia Ficcion,169,nolan@cine.com
+Gravity,Ciencia Ficcion,91,alfonso@cine.com
+Arrival,Ciencia Ficcion,116,denis@cine.com

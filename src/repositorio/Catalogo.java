@@ -1,11 +1,24 @@
 package repositorio;
 
-import modelo.*;
+import modelo.abonos.Abono;
+import modelo.comun.Numerador;
+import modelo.festival.Festival;
+import modelo.festival.Sala;
+import modelo.funciones.Entrada;
+import modelo.funciones.FuncionPresencial;
+import modelo.funciones.FuncionStreaming;
+import modelo.peliculas.Pelicula;
+import modelo.personas.Actor;
+import modelo.personas.Director;
+import modelo.personas.Espectador;
+import modelo.personas.Jurado;
 
 // Reúne los datos del sistema. Lo comparten la persistencia (que lo carga y lo guarda)
-// y SistemaFestival (que reparte cada repositorio al servicio que lo necesita)
+// y SistemaFestival (que reparte cada repositorio al servicio que lo necesita).
+// El numerador vive acá porque al cargar datos guardados hay que seguir la numeración de los códigos
 public class Catalogo {
     private final Festival festival;
+    private final Numerador numerador = new Numerador();
     private final Repositorio<Sala> salas = new RepositorioEnMemoria<>();
     private final Repositorio<Director> directores = new RepositorioEnMemoria<>();
     private final Repositorio<Actor> actores = new RepositorioEnMemoria<>();
@@ -22,6 +35,7 @@ public class Catalogo {
     }
 
     public Festival getFestival() { return festival; }
+    public Numerador getNumerador() { return numerador; }
     public Repositorio<Sala> getSalas() { return salas; }
     public Repositorio<Director> getDirectores() { return directores; }
     public Repositorio<Actor> getActores() { return actores; }
