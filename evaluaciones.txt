@@ -1,0 +1,43 @@
+Pedro Martinez,The Irishman,8.5
+Pedro Martinez,Roma,9.0
+Pedro Martinez,Tar,7.5
+Pedro Martinez,Oppenheimer,9.5
+Pedro Martinez,Parasite,9.8
+Laura Gomez,The Irishman,7.8
+Laura Gomez,Roma,8.5
+Laura Gomez,Tar,8.0
+Laura Gomez,Barbie,7.0
+Laura Gomez,Dune,8.8
+Roberto Silva,The Irishman,9.0
+Roberto Silva,Parasite,9.5
+Roberto Silva,La La Land,8.5
+Roberto Silva,Oppenheimer,9.2
+Roberto Silva,Roma,8.8
+Claudia Reyes,Tar,8.5
+Claudia Reyes,Barbie,6.5
+Claudia Reyes,Dune,9.0
+Claudia Reyes,La La Land,9.5
+Fernando Castro,Parasite,10.0
+Fernando Castro,Oppenheimer,9.0
+Fernando Castro,The Irishman,8.8
+Fernando Castro,Roma,9.2
+Fernando Castro,Barbie,7.5
+Pedro Martinez,Roma,10.0
+Fernando Castro,Volver,9.0
+Pedro Martinez,Dolor y gloria,8.7
+Laura Gomez,Dolor y gloria,9.1
+Claudia Reyes,Dolor y gloria,8.4
+Roberto Silva,Moonrise Kingdom,8.0
+Fernando Castro,Moonrise Kingdom,7.6
+Pedro Martinez,Whiplash,9.3
+Claudia Reyes,Whiplash,9.0
+Laura Gomez,Lady Bird,8.2
+Fernando Castro,Lady Bird,8.6
+Pedro Martinez,Interstellar,9.4
+Roberto Silva,Interstellar,9.1
+Laura Gomez,Interstellar,8.9
+Claudia Reyes,Gravity,8.3
+Fernando Castro,Gravity,8.0
+Roberto Silva,Arrival,8.8
+Laura Gomez,Arrival,9.2
+Pedro Martinez,Arrival,8.5
