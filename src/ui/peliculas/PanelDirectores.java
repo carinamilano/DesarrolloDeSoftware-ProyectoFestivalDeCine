@@ -1,36 +1,81 @@
 package ui.peliculas;
 
+import excepciones.FestivalException;
+import modelo.Director;
 import servicios.PersonaServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
 import ui.comun.DialogoPersona;
-import ui.comun.PanelListado;
 
-import java.util.List;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import java.awt.*;
 
-public class PanelDirectores extends PanelListado {
-    private final PersonaServicio personaServicio;
+public class PanelDirectores extends JPanel {
+
+    private VentanaPrincipal ventana;
+    private PersonaServicio personaServicio;
+    private DefaultTableModel modeloTabla;
+    private TableRowSorter<DefaultTableModel> sorter;
 
     public PanelDirectores(VentanaPrincipal ventana, PersonaServicio personaServicio) {
-        super(ventana, "Gestión de Directores", "Nombre", "Email", "Nacionalidad", "Películas");
+        this.ventana = ventana;
         this.personaServicio = personaServicio;
-        agregarBotones(ComponentesUI.crearBoton("Agregar director", this::agregarDirector));
-        recargar();
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        construirTabla();
+        construirPanelBotones();
+        cargarDatos();
     }
 
-    @Override
-    protected List<Object[]> obtenerFilas() {
-        return personaServicio.getDirectores().stream()
-                .map(director -> new Object[]{
-                        director.getNombre(), director.getEmail(), director.getNacionalidad(), director.cantidadPeliculas()})
-                .toList();
+    private void construirTabla() {
+        modeloTabla = ComponentesUI.crearModeloTabla("Nombre", "Email", "Nacionalidad", "Películas");
+        JTable tabla = ComponentesUI.crearTabla(modeloTabla);
+        sorter = new TableRowSorter<>(modeloTabla);
+        tabla.setRowSorter(sorter);
+        add(ComponentesUI.crearEncabezado("Gestión de Directores", ComponentesUI.crearBuscador(sorter)), BorderLayout.NORTH);
+        add(new JScrollPane(tabla), BorderLayout.CENTER);
     }
 
+    private void construirPanelBotones() {
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+
+        JButton btnAgregar = new JButton("Agregar director");
+        btnAgregar.addActionListener(e -> agregarDirector());
+
+        panelBotones.add(btnAgregar);
+        add(panelBotones, BorderLayout.SOUTH);
+    }
+
+    private void cargarDatos() {
+        modeloTabla.setRowCount(0);
+        for (Director d : personaServicio.getDirectores()) {
+            modeloTabla.addRow(new Object[]{
+                    d.getNombre(),
+                    d.getEmail(),
+                    d.getNacionalidad(),
+                    d.getPeliculasDirigidas().size()
+            });
+        }
+    }
+
+    /* CORRECCION S8: usa el formulario común DialogoPersona. Si el email ya existe (I8),
+    se muestra el error y el formulario vuelve a abrirse con lo escrito.*/
     private void agregarDirector() {
-        DialogoPersona.mostrar(getVentana(), "Agregar director", personaServicio::registrarDirector)
-                .ifPresent(director -> {
-                    recargar();
-                    getVentana().setEstado("Director agregado: " + director.getNombre());
-                });
+        DialogoPersona dialogo = new DialogoPersona(ventana, "Agregar director");
+        while (dialogo.mostrar()) {
+            try {
+                Director d = personaServicio.registrarDirector(dialogo.getNombre(), dialogo.getEmail(), dialogo.getNacionalidad());
+                cargarDatos();
+                ventana.setEstado("Director agregado: " + d.getNombre());
+                break;
+            } catch (FestivalException ex) {
+                dialogo.mostrarError(ex.getMessage());
+            } catch (RuntimeException ex) {
+                dialogo.mostrarError(ComponentesUI.errorInesperado(ex));
+            }
+        }
+        dialogo.dispose();
     }
 }

@@ -1,41 +1,75 @@
 package ui.comun;
 
-import modelo.personas.Persona;
+import javax.swing.*;
+import java.awt.*;
 
-import javax.swing.JTextField;
-import java.awt.Window;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
+/* CORRECCIÓN S8: un solo formulario de persona (nombre, email y nacionalidad).
+Antes había cuatro casi iguales: en PanelDirectores, PanelActores, PanelEspectadores y PanelEvaluaciones.
+Quien lo usa lo muestra, intenta registrar a la persona y, si el servicio rechaza los datos
+(por ejemplo, email repetido), muestra el error y lo vuelve a abrir con lo que se había escrito.*/
+public class DialogoPersona extends JDialog {
+    private JTextField campoNombre;
+    private JTextField campoEmail;
+    private JTextField campoNacionalidad;
+    private JLabel labelError;
+    private boolean aceptado;
 
-// Alta de una persona (nombre, email y nacionalidad). Lo usan directores, actores,
-// espectadores y jurados; antes había cuatro copias del mismo diálogo
-public final class DialogoPersona {
+    public DialogoPersona(Window padre, String titulo) {
+        super(padre, titulo, ModalityType.APPLICATION_MODAL);
+        setSize(400, 250);
+        setLocationRelativeTo(padre);
+        setLayout(new BorderLayout(10, 10));
 
-    @FunctionalInterface
-    public interface Registro<T extends Persona> {
-        T registrar(String nombre, String email, String nacionalidad);
+        JPanel panelCampos = ComponentesUI.crearPanelCampos(3);
+        campoNombre = new JTextField();
+        campoEmail = new JTextField();
+        campoNacionalidad = new JTextField();
+        panelCampos.add(new JLabel("Nombre:"));
+        panelCampos.add(campoNombre);
+        panelCampos.add(new JLabel("Email:"));
+        panelCampos.add(campoEmail);
+        panelCampos.add(new JLabel("Nacionalidad:"));
+        panelCampos.add(campoNacionalidad);
+
+        labelError = ComponentesUI.crearLabelError();
+        JButton btnAceptar = new JButton("Aceptar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        campoNombre.addActionListener(e -> campoEmail.requestFocus());
+        campoEmail.addActionListener(e -> campoNacionalidad.requestFocus());
+        campoNacionalidad.addActionListener(e -> btnAceptar.doClick());
+        btnCancelar.addActionListener(e -> setVisible(false));
+        btnAceptar.addActionListener(e -> aceptar());
+
+        add(panelCampos, BorderLayout.CENTER);
+        add(ComponentesUI.crearPanelSur(labelError, btnAceptar, btnCancelar), BorderLayout.SOUTH);
     }
 
-    private DialogoPersona() {
+
+    public boolean mostrar() {
+        aceptado = false;
+        setVisible(true);
+        return aceptado;
     }
 
-    // Devuelve la persona registrada, o vacío si se canceló
-    public static <T extends Persona> Optional<T> mostrar(Window padre, String titulo, Registro<T> registro) {
-        FormularioDialogo formulario = new FormularioDialogo(padre, titulo, 400, 250);
-        JTextField campoNombre = formulario.agregarCampo("Nombre:", new JTextField());
-        JTextField campoEmail = formulario.agregarCampo("Email:", new JTextField());
-        JTextField campoNacionalidad = formulario.agregarCampo("Nacionalidad:", new JTextField());
-        formulario.encadenarEnter(campoNombre, campoEmail, campoNacionalidad);
+    public void mostrarError(String mensaje) {
+        labelError.setText(mensaje);
+    }
 
-        AtomicReference<T> registrada = new AtomicReference<>();
-        formulario.alAceptar(() -> {
-            String nombre = LectorCampos.texto(campoNombre, "El nombre es obligatorio.");
-            String email = LectorCampos.texto(campoEmail, "El email es obligatorio.");
-            String nacionalidad = LectorCampos.texto(campoNacionalidad, "La nacionalidad es obligatoria.");
-            registrada.set(registro.registrar(nombre, email, nacionalidad));
-            formulario.cerrar();
-        });
-        formulario.mostrar();
-        return Optional.ofNullable(registrada.get());
+    public String getNombre() { return campoNombre.getText().trim(); }
+    public String getEmail() { return campoEmail.getText().trim(); }
+    public String getNacionalidad() { return campoNacionalidad.getText().trim(); }
+
+    private void aceptar() {
+        try {
+            LectorCampos.texto(campoNombre, "Nombre");
+            LectorCampos.texto(campoEmail, "Email");
+            LectorCampos.texto(campoNacionalidad, "Nacionalidad");
+            aceptado = true;
+            setVisible(false);
+        } catch (CampoInvalidoException ex) {
+            labelError.setText(ex.getMessage());
+            ex.getCampo().requestFocus();
+        }
     }
 }

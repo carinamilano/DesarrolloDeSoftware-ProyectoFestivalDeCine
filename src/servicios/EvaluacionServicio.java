@@ -1,45 +1,53 @@
 package servicios;
 
-import modelo.comun.Validar;
-import modelo.festival.Edicion;
-import modelo.peliculas.Evaluacion;
-import modelo.peliculas.Pelicula;
-import modelo.peliculas.VotoPublico;
-import modelo.personas.Espectador;
-import modelo.personas.Jurado;
+import modelo.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
-// Evaluaciones del jurado y voto del público. Las reglas (rangos de puntaje, una sola vez,
-// tener entrada) viven en Pelicula, Evaluacion y VotoPublico; acá solo se coordina
+// CORRECCION S2: evaluaciones del jurado y votos del público tienen su propio servicio
 public class EvaluacionServicio {
-    private final PeliculaServicio peliculas;
+    private PeliculaServicio peliculaServicio;
 
-    public EvaluacionServicio(PeliculaServicio peliculas) {
-        this.peliculas = peliculas;
+    public EvaluacionServicio(PeliculaServicio peliculaServicio) {
+        this.peliculaServicio = peliculaServicio;
     }
 
+    // CORRECCION I3/I9: Pelicula controla que el jurado no la haya evaluado y Evaluacion valida el puntaje.
+    // CORRECCION I10: recibe el Jurado elegido, no su nombre.
     public Evaluacion registrarEvaluacion(Jurado jurado, Pelicula pelicula, double puntaje) {
-        return Validar.presente(pelicula, "La película es obligatoria.").recibirEvaluacion(jurado, puntaje);
+        return pelicula.registrarEvaluacion(jurado, puntaje);
     }
 
     public VotoPublico registrarVotoPublico(Espectador espectador, Pelicula pelicula, int puntaje) {
-        return Validar.presente(pelicula, "La película es obligatoria.").recibirVoto(espectador, puntaje);
+        return pelicula.registrarVoto(espectador, puntaje);
     }
 
-    // Películas de la edición que el espectador vio (tiene entrada) y todavía no votó
+    // CORRECCION S7: antes este filtro estaba en PanelVotoPublico.
     public List<Pelicula> peliculasParaVotar(Espectador espectador, Edicion edicion) {
-        return espectador.getPeliculasVistas().stream()
-                .filter(edicion::incluye)
-                .filter(pelicula -> !pelicula.fueVotadaPor(espectador))
-                .toList();
+        List<Pelicula> paraVotar = new ArrayList<>();
+        for (Entrada entrada : espectador.getEntradas()) {
+            Pelicula p = entrada.getFuncion().getPelicula();
+            if (edicion.incluye(p) && !paraVotar.contains(p) && !p.fueVotadaPor(espectador)) {
+                paraVotar.add(p);
+            }
+        }
+        return paraVotar;
     }
 
     public List<Evaluacion> getEvaluaciones() {
-        return peliculas.getPeliculas().stream().flatMap(pelicula -> pelicula.getEvaluaciones().stream()).toList();
+        List<Evaluacion> evaluaciones = new ArrayList<>();
+        for (Pelicula p : peliculaServicio.getPeliculas()) {
+            evaluaciones.addAll(p.getEvaluaciones());
+        }
+        return evaluaciones;
     }
 
     public List<VotoPublico> getVotosPublico() {
-        return peliculas.getPeliculas().stream().flatMap(pelicula -> pelicula.getVotosPublico().stream()).toList();
+        List<VotoPublico> votos = new ArrayList<>();
+        for (Pelicula p : peliculaServicio.getPeliculas()) {
+            votos.addAll(p.getVotosPublico());
+        }
+        return votos;
     }
 }

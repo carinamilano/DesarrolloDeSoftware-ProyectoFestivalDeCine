@@ -1,7 +1,6 @@
 package excepciones;
 
-// Se intenta registrar algo que ya existe (persona con el mismo email, película con el mismo título,
-// una segunda evaluación del mismo jurado, etc.)
+// CORRECCION S6/I8: se intenta registrar algo que ya existe (email, titulo, sala, evaluación...).
 public class EntidadDuplicadaException extends FestivalException {
     public EntidadDuplicadaException(String mensaje) {
         super(mensaje);

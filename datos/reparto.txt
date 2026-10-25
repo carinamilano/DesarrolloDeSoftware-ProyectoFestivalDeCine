@@ -1,0 +1,11 @@
+The Irishman;deniro@cine.com
+The Irishman;pacino@cine.com
+Roma;meryl@cine.com
+Tar;cate@cine.com
+Oppenheimer;joaquin@cine.com
+Barbie;margot@cine.com
+Barbie;ryan@cine.com
+The Grand Budapest Hotel;leo@cine.com
+Dune;timo@cine.com
+La La Land;emma@cine.com
+La La Land;ryan@cine.com

@@ -1,0 +1,12 @@
+2024;COMPETENCIA_OFICIAL;Palma de Oro 2024;Premio a la mejor pelicula
+2024;CINE_INDEPENDIENTE;Premio Independiente 2024;Premio al mejor cine independiente
+2024;CORTOMETRAJE;Premio Cortometraje 2024;Premio al mejor cortometraje
+2024;NUEVOS_TALENTOS;Premio Revelacion 2024;Premio al nuevo talento
+2025;COMPETENCIA_OFICIAL;Palma de Oro 2025;Premio a la mejor pelicula
+2025;CINE_INDEPENDIENTE;Premio Independiente 2025;Premio al mejor cine independiente
+2025;CORTOMETRAJE;Premio Cortometraje 2025;Premio al mejor cortometraje
+2025;NUEVOS_TALENTOS;Premio Revelacion 2025;Premio al nuevo talento
+2026;COMPETENCIA_OFICIAL;Palma de Oro 2026;Premio a la mejor pelicula
+2026;CINE_INDEPENDIENTE;Premio Independiente 2026;Premio al mejor cine independiente
+2026;CORTOMETRAJE;Premio Cortometraje 2026;Premio al mejor cortometraje
+2026;NUEVOS_TALENTOS;Premio Revelacion 2026;Premio al nuevo talento

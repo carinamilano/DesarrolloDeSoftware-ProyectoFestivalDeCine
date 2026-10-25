@@ -1,0 +1,20 @@
+F-1;PRESENCIAL;The Irishman;2026-10-31;15:00;Sala 1
+F-2;PRESENCIAL;The Irishman;2026-10-31;20:00;Sala 2
+F-3;PRESENCIAL;Roma;2026-11-01;16:00;Sala 2
+F-4;PRESENCIAL;Roma;2026-11-01;21:00;Sala 3
+F-5;PRESENCIAL;Tar;2026-11-02;17:00;Sala 3
+F-6;PRESENCIAL;Tar;2026-11-02;21:00;Sala 4
+F-7;PRESENCIAL;Oppenheimer;2026-11-03;14:00;Sala 1
+F-8;PRESENCIAL;Oppenheimer;2026-11-03;19:00;Sala 5
+F-9;PRESENCIAL;Parasite;2026-11-04;16:00;Sala 2
+F-10;PRESENCIAL;Parasite;2026-11-04;20:00;Sala 4
+F-11;PRESENCIAL;Volver;2026-11-05;18:00;Sala 3
+F-12;PRESENCIAL;Volver;2026-11-05;21:00;Sala 5
+F-13;PRESENCIAL;The Grand Budapest Hotel;2026-11-06;17:00;Sala 1
+F-14;PRESENCIAL;The Grand Budapest Hotel;2026-11-06;20:00;Sala 4
+F-15;STREAMING;Barbie;2026-11-07;18:00;https://stream.festival.com/barbie1;500
+F-16;STREAMING;Barbie;2026-11-07;21:00;https://stream.festival.com/barbie2;500
+F-17;STREAMING;Dune;2026-11-08;17:00;https://stream.festival.com/dune1;300
+F-18;STREAMING;Dune;2026-11-08;21:00;https://stream.festival.com/dune2;300
+F-19;STREAMING;La La Land;2026-11-09;18:00;https://stream.festival.com/lalaland1;400
+F-20;STREAMING;La La Land;2026-11-09;21:00;https://stream.festival.com/lalaland2;400

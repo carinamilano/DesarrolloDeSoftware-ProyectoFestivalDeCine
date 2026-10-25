@@ -1,16 +1,13 @@
 package ui.evaluaciones;
 
-import modelo.festival.Edicion;
-import modelo.peliculas.Pelicula;
-import modelo.personas.Espectador;
+import excepciones.FestivalException;
+import modelo.*;
 import servicios.EvaluacionServicio;
 import servicios.FestivalServicio;
 import servicios.PeliculaServicio;
 import servicios.PersonaServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
-import ui.comun.FormularioDialogo;
-import ui.comun.SelectorPersona;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -18,88 +15,131 @@ import java.awt.*;
 import java.util.List;
 
 public class PanelVotoPublico extends JPanel {
-    private final VentanaPrincipal ventana;
-    private final EvaluacionServicio evaluacionServicio;
-    private final PeliculaServicio peliculaServicio;
-    private final PersonaServicio personaServicio;
-    private final FestivalServicio festivalServicio;
-    private final DefaultTableModel modeloVotos;
-    private final JTextArea areaPremio;
 
-    public PanelVotoPublico(VentanaPrincipal ventana, EvaluacionServicio evaluacionServicio, PeliculaServicio peliculaServicio,
-                            PersonaServicio personaServicio, FestivalServicio festivalServicio) {
+    private VentanaPrincipal ventana;
+    private EvaluacionServicio evaluacionServicio;
+    private PeliculaServicio peliculaServicio;
+    private PersonaServicio personaServicio;
+    private FestivalServicio festivalServicio;
+    private DefaultTableModel modeloVotos;
+    private JTextArea areaPremio;
+
+    public PanelVotoPublico(VentanaPrincipal ventana, EvaluacionServicio evaluacionServicio, PeliculaServicio peliculaServicio, PersonaServicio personaServicio, FestivalServicio festivalServicio) {
         this.ventana = ventana;
         this.evaluacionServicio = evaluacionServicio;
         this.peliculaServicio = peliculaServicio;
         this.personaServicio = personaServicio;
         this.festivalServicio = festivalServicio;
-        ComponentesUI.configurarPanel(this);
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        modeloVotos = ComponentesUI.crearModeloTabla("Película", "Edición", "Votos", "Promedio (1-5)");
-        areaPremio = ComponentesUI.crearAreaResultados();
-
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitPane.setResizeWeight(0.5);
-        splitPane.setDividerLocation(450);
-        splitPane.setLeftComponent(ComponentesUI.crearPanelConBorde("Votos por película", ComponentesUI.crearTabla(modeloVotos)));
-        splitPane.setRightComponent(ComponentesUI.crearPanelConBorde("Premio del Público por edición", areaPremio));
-
-        add(ComponentesUI.crearTitulo("Voto del Público"), BorderLayout.NORTH);
-        add(splitPane, BorderLayout.CENTER);
-        add(ComponentesUI.crearPanelBotones(ComponentesUI.crearBoton("Registrar voto", this::registrarVoto)), BorderLayout.SOUTH);
+        add(ComponentesUI.crearEncabezado("Voto del Público", null), BorderLayout.NORTH);
+        construirPanelCentral();
+        construirPanelBotones();
 
         cargarVotos();
         mostrarPremioPublico();
     }
 
+    private void construirPanelCentral() {
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setResizeWeight(0.5);
+        splitPane.setDividerLocation(450);
+        
+        modeloVotos = ComponentesUI.crearModeloTabla("Película", "Edición", "Votos", "Promedio (1-5)");
+        JPanel panelTabla = new JPanel(new BorderLayout());
+        panelTabla.setBorder(BorderFactory.createTitledBorder("Votos por película"));
+        panelTabla.add(new JScrollPane(ComponentesUI.crearTabla(modeloVotos)), BorderLayout.CENTER);
+        
+        JPanel panelPremio = new JPanel(new BorderLayout());
+        panelPremio.setBorder(BorderFactory.createTitledBorder("Premio del Público por edición"));
+
+        areaPremio = new JTextArea();
+        areaPremio.setEditable(false);
+        areaPremio.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        areaPremio.setMargin(new Insets(8, 8, 8, 8));
+        panelPremio.add(new JScrollPane(areaPremio), BorderLayout.CENTER);
+
+        splitPane.setLeftComponent(panelTabla);
+        splitPane.setRightComponent(panelPremio);
+        add(splitPane, BorderLayout.CENTER);
+    }
+
+    private void construirPanelBotones() {
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+
+        JButton btnVotar = new JButton("Registrar voto");
+        btnVotar.addActionListener(e -> registrarVoto());
+
+        panelBotones.add(btnVotar);
+        add(panelBotones, BorderLayout.SOUTH);
+    }
+
     private void cargarVotos() {
         modeloVotos.setRowCount(0);
-        for (Pelicula pelicula : peliculaServicio.getPeliculas()) {
+        for (Pelicula p : peliculaServicio.getPeliculas()) {
+            int cantidad = p.getVotosPublico().size();
+            // CORRECCION S5: se pregunta si compite antes de buscar la edición (antes se comparaba con null).
+            String edicion = festivalServicio.compiteEnAlgunaEdicion(p)
+                    ? ComponentesUI.describir(festivalServicio.buscarEdicionDe(p)) : "-";
             modeloVotos.addRow(new Object[]{
-                    pelicula.getTitulo(),
-                    festivalServicio.buscarEdicionDePelicula(pelicula).map(Edicion::toString).orElse("-"),
-                    pelicula.cantidadVotos(),
-                    pelicula.tieneVotos() ? String.format("%.2f", pelicula.calcularPromedioPublico()) : "-"
+                    p.getTitulo(),
+                    edicion,
+                    cantidad,
+                    cantidad == 0 ? "-" : String.format("%.2f", p.calcularPromedioPublico())
             });
         }
     }
 
     private void registrarVoto() {
         List<Espectador> espectadores = personaServicio.getEspectadores();
-        List<Edicion> ediciones = festivalServicio.getEdiciones();
         if (espectadores.isEmpty()) {
-            ComponentesUI.avisar(ventana, "No hay espectadores registrados.");
-            return;
-        }
-        if (ediciones.isEmpty()) {
-            ComponentesUI.avisar(ventana, "No hay ediciones registradas.");
+            ComponentesUI.mostrarAviso(ventana, "No hay espectadores registrados.");
             return;
         }
 
-        FormularioDialogo formulario = new FormularioDialogo(ventana, "Registrar voto del público", 540, 330);
-        formulario.setTextoAceptar("Votar");
-        JComboBox<Edicion> comboEdicion = formulario.agregarCampo("Edición:", new JComboBox<>(ediciones.toArray(new Edicion[0])));
-        JComboBox<Espectador> comboEspectador = formulario.agregarCampo("Espectador:", SelectorPersona.crearCombo(espectadores));
-        JComboBox<Pelicula> comboPelicula = formulario.agregarCampo("Película:",
-                ComponentesUI.crearCombo(List.<Pelicula>of(), Pelicula::getTitulo));
-        JComboBox<Integer> comboPuntaje = formulario.agregarCampo("Puntaje (estrellas):", new JComboBox<>(new Integer[]{5, 4, 3, 2, 1}));
+        List<Edicion> ediciones = festivalServicio.getEdiciones();
+        if (ediciones.isEmpty()) {
+            ComponentesUI.mostrarAviso(ventana, "No hay ediciones registradas.");
+            return;
+        }
+
+        JDialog dialog = new JDialog(ventana, "Registrar voto del público", true);
+        dialog.setSize(560, 330);
+        dialog.setLocationRelativeTo(ventana);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        // CORRECCION S10/I10: los combos guardan los objetos (antes se elegía por posición o por nombre).
+        JComboBox<Edicion> comboEdicion = ComponentesUI.crearComboEdiciones(ediciones);
+        JComboBox<Espectador> comboEspectador = ComponentesUI.crearComboPersonas(espectadores);
+        JComboBox<Pelicula> comboPelicula = ComponentesUI.crearComboPeliculas(List.of());
+        JComboBox<Integer> comboPuntaje = new JComboBox<>(new Integer[]{5, 4, 3, 2, 1});
         comboEdicion.setSelectedIndex(ediciones.size() - 1); // la edición más reciente
 
-        JLabel labelAyuda = new JLabel();
-        labelAyuda.setFont(ComponentesUI.FUENTE_AYUDA);
-        labelAyuda.setBorder(BorderFactory.createEmptyBorder(5, 20, 0, 20));
-        formulario.agregarDebajo(labelAyuda);
+        JPanel panelCampos = ComponentesUI.crearPanelCampos(4);
+        panelCampos.add(new JLabel("Edición:"));
+        panelCampos.add(comboEdicion);
+        panelCampos.add(new JLabel("Espectador:"));
+        panelCampos.add(comboEspectador);
+        panelCampos.add(new JLabel("Película:"));
+        panelCampos.add(comboPelicula);
+        panelCampos.add(new JLabel("Puntaje (estrellas):"));
+        panelCampos.add(comboPuntaje);
 
-        // Qué películas puede votar lo decide el servicio
+        JLabel labelAyuda = new JLabel();
+        labelAyuda.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        labelAyuda.setBorder(BorderFactory.createEmptyBorder(5, 20, 0, 20));
+
+        // CORRECCION S7: que películas puede votar el espectador lo decide EvaluacionServicio.
         Runnable actualizarPeliculas = () -> {
-            Edicion edicion = ComponentesUI.seleccionado(comboEdicion);
-            Espectador espectador = ComponentesUI.seleccionado(comboEspectador);
-            List<Pelicula> votables = evaluacionServicio.peliculasParaVotar(espectador, edicion);
             comboPelicula.removeAllItems();
-            votables.forEach(comboPelicula::addItem);
-            if (votables.isEmpty()) {
-                labelAyuda.setForeground(ComponentesUI.COLOR_AVISO);
-                labelAyuda.setText("<html>" + espectador.getNombre() + " no tiene películas para votar en la edición "
+            Edicion edicion = ComponentesUI.seleccionado(comboEdicion);
+            Espectador esp = ComponentesUI.seleccionado(comboEspectador);
+            List<Pelicula> paraVotar = evaluacionServicio.peliculasParaVotar(esp, edicion);
+            for (Pelicula p : paraVotar) comboPelicula.addItem(p);
+            if (paraVotar.isEmpty()) {
+                labelAyuda.setForeground(new Color(150, 50, 50));
+                labelAyuda.setText("<html>" + esp.getNombre() + " no tiene películas para votar en la edición "
                         + edicion.getAnio() + ": solo se vota lo que se vio (con entrada) y una vez por película.</html>");
             } else {
                 labelAyuda.setForeground(Color.DARK_GRAY);
@@ -111,20 +151,40 @@ public class PanelVotoPublico extends JPanel {
         comboEspectador.addActionListener(e -> actualizarPeliculas.run());
         actualizarPeliculas.run();
 
-        formulario.alAceptar(() -> {
+        JPanel panelCentro = new JPanel(new BorderLayout());
+        panelCentro.add(panelCampos, BorderLayout.CENTER);
+        panelCentro.add(labelAyuda, BorderLayout.SOUTH);
+
+        JLabel labelError = ComponentesUI.crearLabelError();
+        JButton btnAceptar = new JButton("Votar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        btnCancelar.addActionListener(e -> dialog.dispose());
+
+        btnAceptar.addActionListener(e -> {
             Pelicula pelicula = ComponentesUI.seleccionado(comboPelicula);
             if (pelicula == null) {
-                formulario.mostrarError("No hay película para votar con esta edición y espectador.");
+                labelError.setText("No hay película para votar con esta edición y espectador.");
                 return;
             }
             Espectador espectador = ComponentesUI.seleccionado(comboEspectador);
-            evaluacionServicio.registrarVotoPublico(espectador, pelicula, ComponentesUI.seleccionado(comboPuntaje));
-            cargarVotos();
-            mostrarPremioPublico();
-            ventana.setEstado("Voto registrado: " + espectador.getNombre() + " → " + pelicula.getTitulo());
-            formulario.cerrar();
+            int puntaje = ComponentesUI.seleccionado(comboPuntaje);
+            try {
+                evaluacionServicio.registrarVotoPublico(espectador, pelicula, puntaje);
+                cargarVotos();
+                mostrarPremioPublico();
+                ventana.setEstado("Voto registrado: " + espectador.getNombre() + " → " + pelicula.getTitulo());
+                dialog.dispose();
+            } catch (FestivalException ex) {
+                labelError.setText(ex.getMessage());
+            } catch (RuntimeException ex) {
+                labelError.setText(ComponentesUI.errorInesperado(ex));
+            }
         });
-        formulario.mostrar();
+
+        dialog.add(panelCentro, BorderLayout.CENTER);
+        dialog.add(ComponentesUI.crearPanelSur(labelError, btnAceptar, btnCancelar), BorderLayout.SOUTH);
+        dialog.setVisible(true);
     }
 
     private void mostrarPremioPublico() {
@@ -134,17 +194,24 @@ public class PanelVotoPublico extends JPanel {
             return;
         }
 
-        StringBuilder texto = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         for (Edicion edicion : ediciones) {
-            texto.append("Edición ").append(edicion.getAnio()).append(" — ").append(edicion.getCiudad()).append("\n");
-            texto.append("─────────────────────────────\n");
-            texto.append(edicion.determinarGanadoraPublico()
-                    .map(ganadora -> String.format("  🏆 %s (promedio: %.2f — %d votos)%n",
-                            ganadora.getTitulo(), ganadora.calcularPromedioPublico(), ganadora.cantidadVotos()))
-                    .orElse("  Sin votos del público.\n"));
-            texto.append("\n");
+            sb.append("Edición ").append(edicion.getAnio())
+                    .append(" — ").append(edicion.getCiudad()).append("\n");
+            sb.append("─────────────────────────────\n");
+            // CORRECCION I12: con empate gana la película con más votos.
+            if (edicion.tieneGanadoraPublico()) {
+                Pelicula ganadora = edicion.determinarGanadoraPublico();
+                sb.append("  🏆 ").append(ganadora.getTitulo())
+                        .append(" (promedio: ")
+                        .append(String.format("%.2f", ganadora.calcularPromedioPublico()))
+                        .append(" — ").append(ganadora.getVotosPublico().size()).append(" votos)\n");
+            } else {
+                sb.append("  Sin votos del público.\n");
+            }
+            sb.append("\n");
         }
-        areaPremio.setText(texto.toString());
+        areaPremio.setText(sb.toString());
         areaPremio.setCaretPosition(0);
     }
 }

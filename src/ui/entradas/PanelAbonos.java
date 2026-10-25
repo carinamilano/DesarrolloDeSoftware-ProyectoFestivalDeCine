@@ -1,9 +1,8 @@
 package ui.entradas;
 
 import excepciones.FestivalException;
-import modelo.abonos.Abono;
-import modelo.funciones.Entrada;
-import modelo.funciones.Funcion;
+import modelo.Abono;
+import modelo.Entrada;
 import servicios.AbonoServicio;
 import servicios.FuncionServicio;
 import servicios.PersonaServicio;
@@ -13,27 +12,35 @@ import ui.comun.ComponentesUI;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.List;
 
-// Lista de abonos y sus reservas. Los diálogos de compra y de reserva están en sus propias clases
+// CORRECCION S8: los diálogos de compra y reserva pasaron a DialogoComprarAbono y DialogoReservaAbono.
 public class PanelAbonos extends JPanel {
-    private static final int COLUMNA_CODIGO = 0;
 
-    private final VentanaPrincipal ventana;
-    private final AbonoServicio abonoServicio;
-    private final FuncionServicio funcionServicio;
-    private final PersonaServicio personaServicio;
-    private final DefaultTableModel modeloAbonos;
-    private final JTable tablaAbonos;
-    private final DefaultTableModel modeloReservas;
+    private VentanaPrincipal ventana;
+    private AbonoServicio abonoServicio;
+    private FuncionServicio funcionServicio;
+    private PersonaServicio personaServicio;
+    private JTable tablaAbonos;
+    private DefaultTableModel modeloAbonos;
+    private DefaultTableModel modeloReservas;
 
-    public PanelAbonos(VentanaPrincipal ventana, AbonoServicio abonoServicio, FuncionServicio funcionServicio,
-                       PersonaServicio personaServicio) {
+    public PanelAbonos(VentanaPrincipal ventana, AbonoServicio abonoServicio, FuncionServicio funcionServicio, PersonaServicio personaServicio) {
         this.ventana = ventana;
         this.abonoServicio = abonoServicio;
         this.funcionServicio = funcionServicio;
         this.personaServicio = personaServicio;
-        ComponentesUI.configurarPanel(this);
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(ComponentesUI.crearEncabezado("Abonos del Festival", null), BorderLayout.NORTH);
+        construirPanelCentral();
+        construirPanelBotones();
+
+        cargarAbonos();
+    }
+
+    private void construirPanelCentral() {
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        splitPane.setResizeWeight(0.5);
 
         modeloAbonos = ComponentesUI.crearModeloTabla("Código", "Tipo", "Espectador", "Tarifa", "Precio", "Cobertura", "Reservas");
         tablaAbonos = ComponentesUI.crearTabla(modeloAbonos);
@@ -44,35 +51,52 @@ public class PanelAbonos extends JPanel {
         tablaAbonos.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) cargarReservas();
         });
+
+        JPanel panelAbonos = new JPanel(new BorderLayout());
+        panelAbonos.setBorder(BorderFactory.createTitledBorder("Abonos vendidos"));
+        panelAbonos.add(new JScrollPane(tablaAbonos), BorderLayout.CENTER);
+
         modeloReservas = ComponentesUI.crearModeloTabla("Código", "Película", "Fecha", "Horario", "Detalle");
+        JTable tablaReservas = ComponentesUI.crearTabla(modeloReservas);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        splitPane.setResizeWeight(0.5);
-        splitPane.setTopComponent(ComponentesUI.crearPanelConBorde("Abonos vendidos", tablaAbonos));
-        splitPane.setBottomComponent(ComponentesUI.crearPanelConBorde("Reservas del abono seleccionado",
-                ComponentesUI.crearTabla(modeloReservas)));
+        JPanel panelReservas = new JPanel(new BorderLayout());
+        panelReservas.setBorder(BorderFactory.createTitledBorder("Reservas del abono seleccionado"));
+        panelReservas.add(new JScrollPane(tablaReservas), BorderLayout.CENTER);
 
-        add(ComponentesUI.crearTitulo("Abonos del Festival"), BorderLayout.NORTH);
+        splitPane.setTopComponent(panelAbonos);
+        splitPane.setBottomComponent(panelReservas);
         add(splitPane, BorderLayout.CENTER);
-        add(ComponentesUI.crearPanelBotones(
-                ComponentesUI.crearBoton("Comprar abono", this::comprarAbono),
-                ComponentesUI.crearBoton("Reservar función", this::reservarFuncion),
-                ComponentesUI.crearBoton("Cancelar reserva", this::cancelarReserva)), BorderLayout.SOUTH);
+    }
 
-        cargarAbonos();
+    private void construirPanelBotones() {
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+
+        JButton btnComprar = new JButton("Comprar abono");
+        btnComprar.addActionListener(e -> comprarAbono());
+
+        JButton btnReservar = new JButton("Reservar función");
+        btnReservar.addActionListener(e -> reservarFuncion());
+
+        JButton btnCancelar = new JButton("Cancelar reserva");
+        btnCancelar.addActionListener(e -> cancelarReserva());
+
+        panelBotones.add(btnComprar);
+        panelBotones.add(btnReservar);
+        panelBotones.add(btnCancelar);
+        add(panelBotones, BorderLayout.SOUTH);
     }
 
     private void cargarAbonos() {
         modeloAbonos.setRowCount(0);
-        for (Abono abono : abonoServicio.getAbonos()) {
+        for (Abono a : abonoServicio.getAbonos()) {
             modeloAbonos.addRow(new Object[]{
-                    abono.getCodigo(),
-                    abono.getTipo(),
-                    abono.getNombreEspectador(),
-                    abono.getTarifa(),
-                    ComponentesUI.formatearPrecio(abono.getPrecio()),
-                    abono.getCobertura(),
-                    abono.cantidadReservas()
+                    a.getCodigo(),
+                    a.getTipo(),
+                    a.getEspectador().getNombre(),
+                    a.getTarifa(),
+                    ComponentesUI.formatearPrecio(a.getPrecio()),
+                    a.getCobertura(),
+                    a.getReservas().size()
             });
         }
         modeloReservas.setRowCount(0);
@@ -82,14 +106,14 @@ public class PanelAbonos extends JPanel {
         modeloReservas.setRowCount(0);
         Abono abono = getAbonoSeleccionado();
         if (abono == null) return;
-        for (Entrada reserva : abono.getReservas()) {
-            Funcion funcion = reserva.getFuncion();
+        for (Entrada e : abono.getReservas()) {
+            // CORRECCION S3: el lugar lo responde la función y el detalle la entrada, sin instanceof.
             modeloReservas.addRow(new Object[]{
-                    reserva.getCodigo(),
-                    funcion.getTituloPelicula(),
-                    funcion.getFecha().toString(),
-                    funcion.getHorario().toString(),
-                    funcion.getLugar() + " - " + reserva.getDetalle()
+                    e.getCodigo(),
+                    e.getFuncion().getPelicula().getTitulo(),
+                    e.getFuncion().getFecha().toString(),
+                    e.getFuncion().getHorario().toString(),
+                    e.getFuncion().getLugar() + " - " + e.getDetalle()
             });
         }
     }
@@ -97,67 +121,85 @@ public class PanelAbonos extends JPanel {
     private Abono getAbonoSeleccionado() {
         int fila = tablaAbonos.getSelectedRow();
         if (fila < 0) return null;
-        return abonoServicio.buscarAbono((String) modeloAbonos.getValueAt(fila, COLUMNA_CODIGO));
+        String codigo = (String) modeloAbonos.getValueAt(tablaAbonos.convertRowIndexToModel(fila), 0);
+        return abonoServicio.buscarAbono(codigo);
     }
 
-    private void seleccionarAbono(Abono abono) {
+    private void seleccionarAbono(String codigo) {
         for (int i = 0; i < modeloAbonos.getRowCount(); i++) {
-            if (modeloAbonos.getValueAt(i, COLUMNA_CODIGO).equals(abono.getCodigo())) {
+            if (modeloAbonos.getValueAt(i, 0).equals(codigo)) {
                 tablaAbonos.setRowSelectionInterval(i, i);
                 return;
             }
         }
     }
 
-    private void refrescarSeleccionando(Abono abono) {
-        cargarAbonos();
-        seleccionarAbono(abono);
-    }
-
     private void comprarAbono() {
-        if (!SelectorEspectador.asegurarEspectadores(ventana, personaServicio, "Comprar abono")) return;
-        new DialogoComprarAbono(ventana, abonoServicio, funcionServicio, personaServicio).mostrar().ifPresent(abono -> {
-            refrescarSeleccionando(abono);
+        if (!ComponentesUI.asegurarEspectadores(ventana, personaServicio, "Comprar abono")) return;
+
+        DialogoComprarAbono dialogo = new DialogoComprarAbono(ventana, abonoServicio, funcionServicio, personaServicio);
+        if (dialogo.mostrar()) {
+            Abono abono = dialogo.getAbonoComprado();
+            cargarAbonos();
+            seleccionarAbono(abono.getCodigo());
             ventana.setEstado("Abono vendido: " + abono.getCodigo() + " - Precio: " + ComponentesUI.formatearPrecio(abono.getPrecio()));
-        });
+        }
     }
 
     private void reservarFuncion() {
         Abono abono = getAbonoSeleccionado();
         if (abono == null) {
-            ComponentesUI.avisar(ventana, "Seleccione un abono de la tabla.");
+            ComponentesUI.mostrarAviso(ventana, "Seleccione un abono de la tabla.");
             return;
         }
-        // Qué funciones cubre el abono lo resuelve el modelo, sin instanceof
-        List<Funcion> funciones = abonoServicio.funcionesReservables(abono);
-        if (funciones.isEmpty()) {
-            ComponentesUI.avisar(ventana, "No hay funciones disponibles para este abono.");
+        if (abonoServicio.funcionesReservables(abono).isEmpty()) {
+            ComponentesUI.mostrarAviso(ventana, "No hay funciones disponibles para este abono.");
             return;
         }
-        new DialogoReservaAbono(ventana, abonoServicio, abono, funciones).mostrar().ifPresent(reserva -> {
-            refrescarSeleccionando(abono);
-            ventana.setEstado("Reserva realizada: " + reserva.getCodigo());
-        });
+
+        DialogoReservaAbono dialogo = new DialogoReservaAbono(ventana, abonoServicio, funcionServicio, abono);
+        if (dialogo.mostrar()) {
+            cargarAbonos();
+            seleccionarAbono(abono.getCodigo());
+            ventana.setEstado("Reserva realizada: " + dialogo.getReserva().getCodigo());
+        }
     }
 
     private void cancelarReserva() {
         Abono abono = getAbonoSeleccionado();
-        if (abono == null || !abono.tieneReservas()) {
-            ComponentesUI.avisar(ventana, "Seleccione un abono que tenga reservas.");
+        if (abono == null || abono.getReservas().isEmpty()) {
+            ComponentesUI.mostrarAviso(ventana, "Seleccione un abono que tenga reservas.");
             return;
         }
 
-        Entrada[] reservas = abono.getReservas().toArray(new Entrada[0]);
-        Entrada seleccion = (Entrada) JOptionPane.showInputDialog(ventana, "Reserva a cancelar:", "Cancelar reserva",
-                JOptionPane.QUESTION_MESSAGE, null, reservas, reservas[0]);
-        if (seleccion == null) return;
+        // CORRECCION S10: el combo guarda las reservas; antes se separaba el código del texto elegido.
+        JComboBox<Entrada> comboReserva = new JComboBox<>(abono.getReservas().toArray(new Entrada[0]));
+        comboReserva.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null) {
+                    Entrada e = (Entrada) value;
+                    setText(e.getCodigo() + " — " + ComponentesUI.describir(e.getFuncion()));
+                }
+                return this;
+            }
+        });
+        int opcion = JOptionPane.showConfirmDialog(ventana, comboReserva, "Reserva a cancelar",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (opcion != JOptionPane.OK_OPTION) return;
 
+        Entrada reserva = ComponentesUI.seleccionado(comboReserva);
         try {
-            abonoServicio.cancelarReserva(seleccion);
-            refrescarSeleccionando(abono);
-            ventana.setEstado("Reserva cancelada: " + seleccion.getCodigo());
+            abonoServicio.cancelarReserva(reserva);
+            cargarAbonos();
+            seleccionarAbono(abono.getCodigo());
+            ventana.setEstado("Reserva cancelada: " + reserva.getCodigo());
         } catch (FestivalException ex) {
-            ComponentesUI.mostrarError(ventana, "Error", ex.getMessage());
+            ComponentesUI.mostrarError(ventana, ex.getMessage());
+        } catch (RuntimeException ex) {
+            ComponentesUI.mostrarError(ventana, ComponentesUI.errorInesperado(ex));
         }
     }
 }

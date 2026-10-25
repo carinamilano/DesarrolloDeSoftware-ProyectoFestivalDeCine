@@ -1,135 +1,184 @@
 package servicios;
 
+import excepciones.DatoInvalidoException;
+import excepciones.EntidadDuplicadaException;
 import excepciones.EntidadNoEncontradaException;
 import excepciones.FuncionNoDisponibleException;
-import modelo.comun.Numerador;
-import modelo.comun.Validar;
-import modelo.festival.Edicion;
-import modelo.festival.Festival;
-import modelo.festival.Sala;
-import modelo.funciones.Funcion;
-import modelo.funciones.FuncionPresencial;
-import modelo.funciones.FuncionStreaming;
-import modelo.peliculas.Pelicula;
-import repositorio.Repositorio;
+import modelo.*;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-// Programación de funciones
+// CORRECCION S1: las funciones tienen su propio servicio (antes estaban en EntradaServicio).
 public class FuncionServicio {
-    private final Repositorio<FuncionPresencial> presenciales;
-    private final Repositorio<FuncionStreaming> streaming;
-    private final Festival festival;
-    private final Numerador numerador;
-    private final Clock reloj;
+    private Festival festival;
+    // CORRECCION S3: se guardan también por tipo, así no hace falta instanceof para filtrarlas.
+    private List<Funcion> funciones;
+    private List<FuncionPresencial> funcionesPresenciales;
+    private List<FuncionStreaming> funcionesStreaming;
+    private Contador contador;
 
-    public FuncionServicio(Repositorio<FuncionPresencial> presenciales, Repositorio<FuncionStreaming> streaming,
-                           Festival festival, Numerador numerador, Clock reloj) {
-        this.presenciales = presenciales;
-        this.streaming = streaming;
+    public FuncionServicio(Festival festival) {
         this.festival = festival;
-        this.numerador = numerador;
-        this.reloj = reloj;
+        this.funciones = new ArrayList<>();
+        this.funcionesPresenciales = new ArrayList<>();
+        this.funcionesStreaming = new ArrayList<>();
+        this.contador = new Contador();
     }
 
-    public FuncionPresencial programarFuncionPresencial(Pelicula pelicula, Sala sala, LocalDateTime fechaHora) {
-        validarProgramacion(pelicula, fechaHora);
-        Validar.presente(sala, "La sala es obligatoria.");
-        // La sala queda ocupada desde el inicio hasta que termina la película (antes solo se comparaba la hora de inicio)
-        LocalDateTime fin = pelicula.terminaSiEmpiezaA(fechaHora);
-        presenciales.buscar(otra -> otra.ocupaLaSala(sala, fechaHora, fin)).ifPresent(otra -> {
-            throw new FuncionNoDisponibleException("la " + sala.getNombre() + " está ocupada por "
-                    + otra.getTituloPelicula() + " de " + otra.getHorario() + " a " + otra.getFin().toLocalTime() + ".");
-        });
-        FuncionPresencial funcion = new FuncionPresencial(nuevoCodigo(), pelicula, sala, fechaHora, reloj);
-        presenciales.agregar(funcion);
-        pelicula.agregarFuncion(funcion);
-        return funcion;
-    }
-
-    public FuncionStreaming programarFuncionStreaming(Pelicula pelicula, String enlace, int capacidad, LocalDateTime fechaHora) {
-        validarProgramacion(pelicula, fechaHora);
-        FuncionStreaming funcion = new FuncionStreaming(nuevoCodigo(), pelicula, enlace, capacidad, fechaHora, reloj);
-        streaming.agregar(funcion);
-        pelicula.agregarFuncion(funcion);
-        return funcion;
-    }
-
-    // Una función se programa a futuro, para una película que compite en una edición y dentro de las fechas
-    // de esa edición (antes se podía programar cualquier película en cualquier fecha)
-    private void validarProgramacion(Pelicula pelicula, LocalDateTime fechaHora) {
-        Validar.presente(pelicula, "La película es obligatoria.");
-        Validar.presente(fechaHora, "La fecha y el horario son obligatorios.");
-        if (!fechaHora.isAfter(LocalDateTime.now(reloj))) {
-            throw new FuncionNoDisponibleException("no se puede programar una función en una fecha u horario que ya pasó.");
+    public FuncionPresencial programarFuncionPresencial(Pelicula pelicula, Sala sala, LocalDate fecha, LocalTime horario) {
+        validarProgramacion(pelicula, fecha, horario);
+        LocalDateTime inicio = LocalDateTime.of(fecha, horario);
+        LocalDateTime fin = pelicula.terminaSiEmpiezaA(inicio);
+        // CORRECCION I4: se rechaza cualquier superposición en la sala, usando la duración de la película.
+        for (FuncionPresencial f : funcionesPresenciales) {
+            if (f.usaSala(sala) && f.seSuperponeCon(inicio, fin)) {
+                throw new FuncionNoDisponibleException("la " + sala.getNombre() + " está ocupada por "
+                        + f.getPelicula().getTitulo() + " de " + f.getHorario() + " a " + f.getFin().toLocalTime() + ".");
+            }
         }
-        Edicion edicion = festival.buscarEdicionDe(pelicula).orElseThrow(() -> new FuncionNoDisponibleException(
-                pelicula.getTitulo() + " no compite en ninguna edición del festival."));
-        edicion.validarFechaDeFuncion(fechaHora.toLocalDate());
+        // CORRECCION I11: cada función recibe su código.
+        FuncionPresencial funcion = new FuncionPresencial(contador.siguiente("F-"), fecha, horario, pelicula, sala);
+        agregarPresencial(funcion);
+        return funcion;
     }
 
-    private String nuevoCodigo() {
-        return "F-" + numerador.siguiente();
+    public FuncionStreaming programarFuncionStreaming(Pelicula pelicula, String enlace, int capacidad,
+                                                      LocalDate fecha, LocalTime horario) {
+        validarProgramacion(pelicula, fecha, horario);
+        // CORRECCION I9: la capacidad la valida el constructor de FuncionStreaming.
+        FuncionStreaming funcion = new FuncionStreaming(contador.siguiente("F-"), fecha, horario, pelicula, enlace, capacidad);
+        agregarStreaming(funcion);
+        return funcion;
     }
 
-    // Películas a las que se les puede programar una función: compiten en una edición que no terminó
-    public List<Pelicula> getPeliculasProgramables() {
-        LocalDate hoy = LocalDate.now(reloj);
-        return festival.getEdiciones().stream()
-                .filter(edicion -> !edicion.yaTermino(hoy))
-                .flatMap(edicion -> edicion.getPeliculas().stream())
-                .toList();
+    private void validarProgramacion(Pelicula pelicula, LocalDate fecha, LocalTime horario) {
+        if (pelicula == null || fecha == null || horario == null) {
+            throw new DatoInvalidoException("La película, la fecha y el horario son obligatorios.");
+        }
+        // CORRECCION I1: compara fecha y hora; antes se podía programar hoy a una hora que ya pasó.
+        if (!LocalDateTime.of(fecha, horario).isAfter(LocalDateTime.now())) {
+            throw new FuncionNoDisponibleException("no se puede programar una función en una fecha u hora pasada.");
+        }
+        // CORRECCION I6: la película tiene que competir en una edición y la fecha caer dentro de ella.
+        if (!festival.compiteEnAlgunaEdicion(pelicula)) {
+            throw new FuncionNoDisponibleException(pelicula.getTitulo()
+                    + " no compite en ninguna edición. Asóciela a una sección primero.");
+        }
+        Edicion edicion = festival.buscarEdicionDe(pelicula);
+        if (!edicion.incluyeFecha(fecha)) {
+            throw new FuncionNoDisponibleException("la edición " + edicion.getAnio() + " es del "
+                    + edicion.getFechaInicio() + " al " + edicion.getFechaFin() + ".");
+        }
     }
 
-    public Edicion buscarEdicionDe(Pelicula pelicula) {
-        return festival.buscarEdicionDe(pelicula)
-                .orElseThrow(() -> new EntidadNoEncontradaException("Edicion", "de " + pelicula.getTitulo()));
+
+    public FuncionPresencial restaurarFuncionPresencial(String codigo, Pelicula pelicula, Sala sala, LocalDate fecha, LocalTime horario) {
+        validarCodigoLibre(codigo);
+        FuncionPresencial funcion = new FuncionPresencial(codigo, fecha, horario, pelicula, sala);
+        contador.registrarUsado(codigo);
+        agregarPresencial(funcion);
+        return funcion;
     }
 
-    // Busca por película, fecha y horario
-    public Funcion buscarFuncion(String tituloPelicula, LocalDateTime fechaHora) {
-        return getFunciones().stream()
-                .filter(funcion -> funcion.corresponde(tituloPelicula, fechaHora))
-                .findFirst()
-                .orElseThrow(() -> new EntidadNoEncontradaException("Funcion", tituloPelicula + " " + fechaHora));
+    public FuncionStreaming restaurarFuncionStreaming(String codigo, Pelicula pelicula, String enlace, int capacidad, LocalDate fecha, LocalTime horario) {
+        validarCodigoLibre(codigo);
+        FuncionStreaming funcion = new FuncionStreaming(codigo, fecha, horario, pelicula, enlace, capacidad);
+        contador.registrarUsado(codigo);
+        agregarStreaming(funcion);
+        return funcion;
     }
 
-    // Fechas (sin repetir, ordenadas y que no pasaron) en las que hay funciones presenciales
-    public List<LocalDate> getFechasConFuncionesPresenciales() {
-        LocalDate hoy = LocalDate.now(reloj);
-        return presenciales.listar().stream().map(Funcion::getFecha)
-                .filter(fecha -> !fecha.isBefore(hoy))
-                .distinct().sorted().toList();
+    private void validarCodigoLibre(String codigo) {
+        for (Funcion f : funciones) {
+            if (f.getCodigo().equalsIgnoreCase(codigo)) {
+                throw new EntidadDuplicadaException("Ya existe la función " + codigo + ".");
+            }
+        }
     }
 
-    public boolean hayFuncionesPresencialesEl(LocalDate fecha) {
-        return presenciales.existe(funcion -> funcion.getFecha().equals(fecha));
+    // CORRECCION I14: la función se vincula con su película recién cuando ya es válida.
+    private void agregarPresencial(FuncionPresencial funcion) {
+        funcion.vincular();
+        funciones.add(funcion);
+        funcionesPresenciales.add(funcion);
     }
 
-    public List<Funcion> getFunciones() {
-        List<Funcion> funciones = new ArrayList<>(presenciales.listar());
-        funciones.addAll(streaming.listar());
-        return List.copyOf(funciones);
+    private void agregarStreaming(FuncionStreaming funcion) {
+        funcion.vincular();
+        funciones.add(funcion);
+        funcionesStreaming.add(funcion);
     }
 
-    public List<FuncionPresencial> getFuncionesPresenciales() {
-        return presenciales.listar();
-    }
-
-    public List<FuncionStreaming> getFuncionesStreaming() {
-        return streaming.listar();
-    }
-
-    // Las que todavía se pueden vender: no comenzaron
+    // CORRECCION S7/I1: la interfaz ofrece solo las funciones que todavía no comenzaron.
     public List<FuncionPresencial> getFuncionesPresencialesEnVenta() {
-        return presenciales.listar().stream().filter(funcion -> !funcion.yaPaso()).toList();
+        List<FuncionPresencial> enVenta = new ArrayList<>();
+        for (FuncionPresencial f : funcionesPresenciales) {
+            if (!f.yaComenzo()) enVenta.add(f);
+        }
+        return enVenta;
     }
 
     public List<FuncionStreaming> getFuncionesStreamingEnVenta() {
-        return streaming.listar().stream().filter(funcion -> !funcion.yaPaso()).toList();
+        List<FuncionStreaming> enVenta = new ArrayList<>();
+        for (FuncionStreaming f : funcionesStreaming) {
+            if (!f.yaComenzo()) enVenta.add(f);
+        }
+        return enVenta;
+    }
+
+    public List<LocalDate> getFechasConFuncionesPresenciales() {
+        List<LocalDate> fechas = new ArrayList<>();
+        for (FuncionPresencial f : funcionesPresenciales) {
+            if (!f.yaComenzo() && !fechas.contains(f.getFecha())) {
+                fechas.add(f.getFecha());
+            }
+        }
+        Collections.sort(fechas);
+        return fechas;
+    }
+
+    public boolean hayFuncionesPresencialesEl(LocalDate fecha) {
+        for (FuncionPresencial f : funcionesPresenciales) {
+            if (f.getFecha().equals(fecha)) return true;
+        }
+        return false;
+    }
+
+    // CORRECCION I11/B1: se busca por código; antes se buscaba por título y fecha y se devolvía la primera.
+    public Funcion buscarFuncion(String codigo) {
+        for (Funcion f : funciones) {
+            if (f.getCodigo().equalsIgnoreCase(codigo)) return f;
+        }
+        throw new EntidadNoEncontradaException("Funcion", "código: " + codigo);
+    }
+
+    public FuncionPresencial buscarFuncionPresencial(String codigo) {
+        for (FuncionPresencial f : funcionesPresenciales) {
+            if (f.getCodigo().equalsIgnoreCase(codigo)) return f;
+        }
+        throw new EntidadNoEncontradaException("Funcion presencial", "código: " + codigo);
+    }
+
+    public FuncionStreaming buscarFuncionStreaming(String codigo) {
+        for (FuncionStreaming f : funcionesStreaming) {
+            if (f.getCodigo().equalsIgnoreCase(codigo)) return f;
+        }
+        throw new EntidadNoEncontradaException("Funcion streaming", "código: " + codigo);
+    }
+
+    // CORRECCION I13: las listas no se pueden modificar desde afuera.
+    public List<Funcion> getFunciones() {
+        return Collections.unmodifiableList(funciones);
+    }
+    public List<FuncionPresencial> getFuncionesPresenciales() {
+        return Collections.unmodifiableList(funcionesPresenciales);
+    }
+    public List<FuncionStreaming> getFuncionesStreaming() {
+        return Collections.unmodifiableList(funcionesStreaming);
     }
 }

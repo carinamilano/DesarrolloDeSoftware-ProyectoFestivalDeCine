@@ -1,0 +1,17 @@
+The Irishman;DRAMA;209;martin@cine.com
+Roma;DRAMA;135;alfonso@cine.com
+Tar;DRAMA;158;todd@cine.com
+Oppenheimer;DRAMA;180;nolan@cine.com
+Volver;DRAMA;121;almodovar@cine.com
+Parasite;THRILLER;132;bong@cine.com
+Barbie;COMEDIA;114;greta@cine.com
+The Grand Budapest Hotel;COMEDIA;99;wes@cine.com
+Dune;CIENCIA_FICCION;155;denis@cine.com
+La La Land;MUSICAL;128;damien@cine.com
+Dolor y gloria;DRAMA;113;almodovar@cine.com
+Moonrise Kingdom;COMEDIA;94;wes@cine.com
+Whiplash;DRAMA;106;damien@cine.com
+Lady Bird;COMEDIA;94;greta@cine.com
+Interstellar;CIENCIA_FICCION;169;nolan@cine.com
+Gravity;CIENCIA_FICCION;91;alfonso@cine.com
+Arrival;CIENCIA_FICCION;116;denis@cine.com

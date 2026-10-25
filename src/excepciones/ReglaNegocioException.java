@@ -1,7 +1,7 @@
 package excepciones;
 
-// La operación no está permitida por una regla del festival. Las reglas más frecuentes
-// tienen su propia subclase (butaca ocupada, abono inválido, voto inválido, etc.)
+/* CORRECCION S6: una regla del festival no permite la operación.
+Las excepciones de abonos, butacas, capacidad, funciones y votos heredan de esta.*/
 public class ReglaNegocioException extends FestivalException {
     public ReglaNegocioException(String mensaje) {
         super(mensaje);

@@ -1,66 +1,39 @@
 package persistencia;
 
-import excepciones.PersistenciaException;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.List;
 
-// Único lugar que abre archivos y maneja IOException
+// CORRECCION P12: único lugar que lee y escribe archivos. Antes cada uno de los 14 métodos lo repetía.
 final class ArchivoTexto {
-    private final Path ruta;
-    private final String entidad;
+    private static final String MARCA_UTF8 = "﻿";
 
-    ArchivoTexto(String nombreArchivo, String entidad) {
-        this.ruta = Path.of(nombreArchivo);
-        this.entidad = entidad;
+    private ArchivoTexto() {
     }
 
-    List<Registro> leerRegistros() throws PersistenciaException {
-        List<Registro> registros = new ArrayList<>();
-        if (!Files.exists(ruta)) return registros;
-        try (BufferedReader lector = Files.newBufferedReader(ruta, StandardCharsets.UTF_8)) {
-            String linea;
-            int numeroLinea = 0;
-            while ((linea = lector.readLine()) != null) {
-                numeroLinea++;
-                if (!linea.isBlank()) registros.add(new Registro(entidad, numeroLinea, linea));
-            }
-        } catch (IOException ex) {
-            throw new PersistenciaException("Error al cargar " + entidad + ": " + ex.getMessage());
+    // CORRECCION P11: el charset se declara siempre (UTF-8), no depende de la configuración de la máquina.
+    static List<String> leerLineas(Path ruta) throws IOException {
+        List<String> lineas = Files.readAllLines(ruta, StandardCharsets.UTF_8);
+        if (!lineas.isEmpty() && lineas.get(0).startsWith(MARCA_UTF8)) {
+            lineas.set(0, lineas.get(0).substring(1));
         }
-        return registros;
+        return lineas;
     }
 
-    // Escribe en un archivo temporal y después lo reemplaza: si algo falla a mitad de camino,
-    // el archivo anterior queda intacto
-    void escribirRegistros(List<List<String>> registros) throws PersistenciaException {
+    /* CORRECCION P8: se escribe primero en un archivo .tmp y después se reemplaza el original.
+     Si algo falla a mitad de camino, el archivo anterior queda intacto (antes quedaba cortado).*/
+    static void escribirLineas(Path ruta, List<String> lineas) throws IOException {
+        Files.createDirectories(ruta.toAbsolutePath().getParent());
         Path temporal = ruta.resolveSibling(ruta.getFileName() + ".tmp");
+        Files.write(temporal, lineas, StandardCharsets.UTF_8);
         try {
-            try (BufferedWriter escritor = Files.newBufferedWriter(temporal, StandardCharsets.UTF_8)) {
-                for (List<String> campos : registros) {
-                    escritor.write(FormatoCsv.unir(campos));
-                    escritor.newLine();
-                }
-            }
-            reemplazar(temporal, ruta);
-        } catch (IOException ex) {
-            throw new PersistenciaException("Error al guardar " + entidad + ": " + ex.getMessage());
-        }
-    }
-
-    private static void reemplazar(Path origen, Path destino) throws IOException {
-        try {
-            Files.move(origen, destino, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException ex) {
-            Files.move(origen, destino, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(temporal, ruta, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(temporal, ruta, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 }

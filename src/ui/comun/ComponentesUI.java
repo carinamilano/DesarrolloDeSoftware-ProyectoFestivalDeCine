@@ -1,41 +1,41 @@
 package ui.comun;
 
-import modelo.precios.Dinero;
+import excepciones.FestivalException;
+import modelo.*;
+import servicios.PersonaServicio;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.util.List;
-import java.util.function.Function;
+import java.util.regex.Pattern;
 
-// Piezas de interfaz que antes se construían copiando las mismas líneas en cada panel
+/* CORRECCION S8/S9: piezas de la interfaz que se repetían en todos los paneles y diálogos.
+También reúne los métodos static que antes estaban en PanelEspectadores y usaban otros paneles.*/
 public final class ComponentesUI {
-    public static final Font FUENTE_TITULO = new Font("SansSerif", Font.BOLD, 16);
-    public static final Font FUENTE_MENSAJE = new Font("SansSerif", Font.PLAIN, 12);
-    public static final Font FUENTE_AYUDA = new Font("SansSerif", Font.ITALIC, 12);
-    public static final Font FUENTE_RESULTADOS = new Font("SansSerif", Font.PLAIN, 13);
-    public static final Color COLOR_AVISO = new Color(150, 50, 50);
 
     private ComponentesUI() {
     }
 
-    public static void configurarPanel(JPanel panel) {
-        panel.setLayout(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-    }
 
     public static JLabel crearTitulo(String texto) {
         JLabel titulo = new JLabel(texto);
-        titulo.setFont(FUENTE_TITULO);
+        titulo.setFont(new Font("SansSerif", Font.BOLD, 16));
         return titulo;
+    }
+
+    public static JPanel crearEncabezado(String titulo, JComponent derecha) {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.add(crearTitulo(titulo), BorderLayout.WEST);
+        if (derecha != null) panel.add(derecha, BorderLayout.EAST);
+        return panel;
     }
 
     public static DefaultTableModel crearModeloTabla(String... columnas) {
         return new DefaultTableModel(columnas, 0) {
             @Override
-            public boolean isCellEditable(int fila, int columna) {
+            public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
@@ -48,84 +48,189 @@ public final class ComponentesUI {
         return tabla;
     }
 
-    // Combo que guarda los objetos del modelo y muestra el texto indicado.
-    // Antes los combos guardaban nombres (String) y después se volvía a buscar el objeto por nombre
-    public static <T> JComboBox<T> crearCombo(List<? extends T> elementos, Function<? super T, String> texto) {
+
+    /* CORRECCION B2: el texto se busca literal (Pattern.quote); antes escribir "(" o "[" lanzaba
+    PatternSyntaxException porque se usaba como expresión regular.*/
+    public static JPanel crearBuscador(TableRowSorter<DefaultTableModel> sorter) {
+        JTextField campo = new JTextField(20);
+        campo.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filtrar(sorter, campo.getText()); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filtrar(sorter, campo.getText()); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filtrar(sorter, campo.getText()); }
+        });
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panel.add(new JLabel("Buscar:"));
+        panel.add(campo);
+        return panel;
+    }
+
+    private static void filtrar(TableRowSorter<DefaultTableModel> sorter, String texto) {
+        if (texto.trim().isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(texto.trim())));
+        }
+    }
+
+    public static JPanel crearPanelCampos(int filas) {
+        JPanel panel = new JPanel(new GridLayout(filas, 2, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 5, 20));
+        return panel;
+    }
+
+    public static JLabel crearLabelError() {
+        JLabel labelError = new JLabel(" ");
+        labelError.setForeground(Color.RED);
+        labelError.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        labelError.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
+        return labelError;
+    }
+
+    public static JPanel crearPanelSur(JLabel labelError, JButton... botones) {
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        for (JButton b : botones) panelBotones.add(b);
+        JPanel panelSur = new JPanel(new BorderLayout());
+        panelSur.add(labelError, BorderLayout.CENTER);
+        panelSur.add(panelBotones, BorderLayout.SOUTH);
+        return panelSur;
+    }
+
+    public static String formatearPrecio(double precio) {
+        return String.format("$ %.2f", precio);
+    }
+
+    public static String describir(Funcion f) {
+        return f.getPelicula().getTitulo() + " — " + f.getFecha() + " " + f.getHorario() + " — " + f.getLugar();
+    }
+
+    public static String describir(Edicion e) {
+        return e.getAnio() + " - " + e.getCiudad();
+    }
+
+    /* CORRECCION S6: los errores de negocio muestran su mensaje; cualquier otro error (un bug) se muestra
+    como "inesperado" y se imprime en la consola. Antes un catch (Exception) mostraba "Error: null".*/
+    public static String errorInesperado(RuntimeException ex) {
+        ex.printStackTrace();
+        return "Error inesperado: " + ex;
+    }
+
+    public static void mostrarError(Component padre, String mensaje) {
+        JOptionPane.showMessageDialog(padre, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    public static void mostrarAviso(Component padre, String mensaje) {
+        JOptionPane.showMessageDialog(padre, mensaje, "Aviso", JOptionPane.WARNING_MESSAGE);
+    }
+
+    /* CORRECCION S10/I10: los combos guardan los objetos (no textos ni posiciones), así lo elegido
+    se usa directamente y no se vuelve a buscar por nombre.*/
+
+    public static <T extends Persona> JComboBox<T> crearComboPersonas(List<T> personas) {
         JComboBox<T> combo = new JComboBox<>();
-        elementos.forEach(combo::addItem);
+        for (T p : personas) combo.addItem(p);
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
-            @SuppressWarnings("unchecked")
-            public Component getListCellRendererComponent(JList<?> lista, Object valor, int indice,
-                                                          boolean seleccionado, boolean conFoco) {
-                super.getListCellRendererComponent(lista, valor, indice, seleccionado, conFoco);
-                if (valor != null) setText(texto.apply((T) valor));
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null) setText(((Persona) value).getNombreYEmail());
                 return this;
             }
         });
         return combo;
     }
 
-    // Elemento elegido en el combo, ya con su tipo (o null si no hay ninguno)
-    public static <T> T seleccionado(JComboBox<T> combo) {
-        return combo.getItemAt(combo.getSelectedIndex());
-    }
-
-    public static JPanel crearPanelConBorde(String titulo, JComponent contenido) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder(titulo));
-        panel.add(new JScrollPane(contenido), BorderLayout.CENTER);
-        return panel;
-    }
-
-    public static JTextArea crearAreaResultados() {
-        JTextArea area = new JTextArea();
-        area.setEditable(false);
-        area.setFont(FUENTE_RESULTADOS);
-        area.setMargin(new Insets(8, 8, 8, 8));
-        return area;
-    }
-
-    public static JButton crearBoton(String texto, Runnable accion) {
-        JButton boton = new JButton(texto);
-        boton.addActionListener(e -> accion.run());
-        return boton;
-    }
-
-    public static JPanel crearPanelBotones(JButton... botones) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        for (JButton boton : botones) {
-            panel.add(boton);
-        }
-        return panel;
-    }
-
-    public static void alCambiarTexto(JTextField campo, Runnable accion) {
-        campo.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { accion.run(); }
-            public void removeUpdate(DocumentEvent e) { accion.run(); }
-            public void changedUpdate(DocumentEvent e) { accion.run(); }
+    public static JComboBox<Pelicula> crearComboPeliculas(List<Pelicula> peliculas) {
+        JComboBox<Pelicula> combo = new JComboBox<>();
+        for (Pelicula p : peliculas) combo.addItem(p);
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null) setText(((Pelicula) value).getTitulo());
+                return this;
+            }
         });
+        return combo;
     }
 
-    public static String formatearPrecio(Dinero precio) {
-        return String.format("$ %.2f", precio.getMonto());
+    public static <T extends Funcion> JComboBox<T> crearComboFunciones(List<T> funciones) {
+        JComboBox<T> combo = new JComboBox<>();
+        for (T f : funciones) combo.addItem(f);
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null) setText(describir((Funcion) value));
+                return this;
+            }
+        });
+        return combo;
     }
 
-    public static void avisar(Component padre, String mensaje) {
-        JOptionPane.showMessageDialog(padre, mensaje, "Aviso", JOptionPane.WARNING_MESSAGE);
+    public static JComboBox<Edicion> crearComboEdiciones(List<Edicion> ediciones) {
+        JComboBox<Edicion> combo = new JComboBox<>();
+        for (Edicion e : ediciones) combo.addItem(e);
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null) setText(describir((Edicion) value));
+                return this;
+            }
+        });
+        return combo;
     }
 
-    public static void informar(Component padre, String mensaje) {
-        JOptionPane.showMessageDialog(padre, mensaje, "Aviso", JOptionPane.INFORMATION_MESSAGE);
+    public static <T> T seleccionado(JComboBox<T> combo) {
+        return combo.getSelectedIndex() < 0 ? null : combo.getItemAt(combo.getSelectedIndex());
     }
 
-    public static void mostrarError(Component padre, String titulo, String mensaje) {
-        JOptionPane.showMessageDialog(padre, mensaje, titulo, JOptionPane.ERROR_MESSAGE);
+
+    /* CORRECCION S9: antes eran métodos static de PanelEspectadores que usaban otros paneles.
+    Si no hay espectadores registrados, ofrece dar de alta uno en el momento.
+    Devuelve true si hay al menos un espectador para continuar con la venta.*/
+    public static boolean asegurarEspectadores(Window padre, PersonaServicio personaServicio, String titulo) {
+        if (!personaServicio.getEspectadores().isEmpty()) return true;
+        int opcion = JOptionPane.showConfirmDialog(padre,
+                "No hay espectadores registrados. ¿Desea dar de alta uno ahora?",
+                titulo, JOptionPane.YES_NO_OPTION);
+        return opcion == JOptionPane.YES_OPTION && darDeAltaEspectador(padre, personaServicio) != null;
     }
 
-    public static boolean confirmar(Component padre, String mensaje, String titulo) {
-        return JOptionPane.showConfirmDialog(padre, mensaje, titulo,
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
+
+    public static Espectador darDeAltaEspectador(Window padre, PersonaServicio personaServicio) {
+        DialogoPersona dialogo = new DialogoPersona(padre, "Agregar espectador");
+        Espectador registrado = null;
+        while (registrado == null && dialogo.mostrar()) {
+            try {
+                registrado = personaServicio.registrarEspectador(dialogo.getNombre(), dialogo.getEmail(), dialogo.getNacionalidad());
+            } catch (FestivalException ex) {
+                dialogo.mostrarError(ex.getMessage());
+            } catch (RuntimeException ex) {
+                dialogo.mostrarError(errorInesperado(ex));
+            }
+        }
+        dialogo.dispose();
+        return registrado;
+    }
+
+    public static JPanel crearSelectorEspectador(Window padre, PersonaServicio personaServicio, JComboBox<Espectador> combo) {
+        JButton btnNuevo = new JButton("Nuevo...");
+        btnNuevo.setToolTipText("Dar de alta un espectador nuevo");
+        btnNuevo.addActionListener(e -> {
+            Espectador nuevo = darDeAltaEspectador(SwingUtilities.getWindowAncestor(btnNuevo), personaServicio);
+            if (nuevo != null) {
+                combo.addItem(nuevo);
+                combo.setSelectedItem(nuevo);
+            }
+        });
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        panel.add(combo, BorderLayout.CENTER);
+        panel.add(btnNuevo, BorderLayout.EAST);
+        return panel;
     }
 }

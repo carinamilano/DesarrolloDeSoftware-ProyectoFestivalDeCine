@@ -1,77 +1,91 @@
 package servicios;
 
 import excepciones.EntidadDuplicadaException;
-import modelo.personas.Actor;
-import modelo.personas.Director;
-import modelo.personas.Espectador;
-import modelo.personas.Jurado;
-import modelo.personas.Persona;
-import repositorio.Repositorio;
+import excepciones.EntidadNoEncontradaException;
+import modelo.*;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-// Alta y búsqueda de las personas del sistema
+/* CORRECCION S2: directores, actores, jurados y espectadores se gestionan en un solo servicio.*/
 public class PersonaServicio {
-    private final Repositorio<Director> directores;
-    private final Repositorio<Actor> actores;
-    private final Repositorio<Jurado> jurados;
-    private final Repositorio<Espectador> espectadores;
+    private List<Director> directores;
+    private List<Actor> actores;
+    private List<Jurado> jurados;
+    private List<Espectador> espectadores;
 
-    public PersonaServicio(Repositorio<Director> directores, Repositorio<Actor> actores,
-                           Repositorio<Jurado> jurados, Repositorio<Espectador> espectadores) {
-        this.directores = directores;
-        this.actores = actores;
-        this.jurados = jurados;
-        this.espectadores = espectadores;
+    public PersonaServicio() {
+        this.directores = new ArrayList<>();
+        this.actores = new ArrayList<>();
+        this.jurados = new ArrayList<>();
+        this.espectadores = new ArrayList<>();
     }
 
     public Director registrarDirector(String nombre, String email, String nacionalidad) {
-        return registrar(directores, new Director(nombre, email, nacionalidad));
+        Director d = new Director(nombre, email, nacionalidad);
+        validarEmailLibre(directores, d.getEmail(), "director");
+        directores.add(d);
+        return d;
     }
 
     public Actor registrarActor(String nombre, String email, String nacionalidad) {
-        return registrar(actores, new Actor(nombre, email, nacionalidad));
+        Actor a = new Actor(nombre, email, nacionalidad);
+        validarEmailLibre(actores, a.getEmail(), "actor");
+        actores.add(a);
+        return a;
     }
 
     public Jurado registrarJurado(String nombre, String email, String nacionalidad) {
-        return registrar(jurados, new Jurado(nombre, email, nacionalidad));
+        Jurado j = new Jurado(nombre, email, nacionalidad);
+        validarEmailLibre(jurados, j.getEmail(), "jurado");
+        jurados.add(j);
+        return j;
     }
 
     public Espectador registrarEspectador(String nombre, String email, String nacionalidad) {
-        return registrar(espectadores, new Espectador(nombre, email, nacionalidad));
+        Espectador e = new Espectador(nombre, email, nacionalidad);
+        validarEmailLibre(espectadores, e.getEmail(), "espectador");
+        espectadores.add(e);
+        return e;
     }
 
-    // Las personas se identifican por email: puede haber dos con el mismo nombre, pero no con el mismo email
-    private <T extends Persona> T registrar(Repositorio<T> repositorio, T persona) {
-        if (repositorio.existe(persona::equals)) {
-            throw new EntidadDuplicadaException("Ya hay alguien registrado con el email " + persona.getEmail() + ".");
+    // CORRECCION I8: no puede haber dos personas del mismo rol con el mismo email.
+    private void validarEmailLibre(List<? extends Persona> personas, String email, String rol) {
+        for (Persona p : personas) {
+            if (p.tieneEmail(email)) {
+                throw new EntidadDuplicadaException("Ya existe un " + rol + " con el email " + email + ".");
+            }
         }
-        repositorio.agregar(persona);
-        return persona;
     }
 
+    // CORRECCION I10: las búsquedas son por email; antes eran por nombre y con homónimos devolvían el primero.
     public Director buscarDirector(String email) {
-        return buscar(directores, email, "Director");
+        return buscarPorEmail(directores, email, "Director");
     }
 
     public Actor buscarActor(String email) {
-        return buscar(actores, email, "Actor");
+        return buscarPorEmail(actores, email, "Actor");
     }
 
     public Jurado buscarJurado(String email) {
-        return buscar(jurados, email, "Jurado");
+        return buscarPorEmail(jurados, email, "Jurado");
     }
 
     public Espectador buscarEspectador(String email) {
-        return buscar(espectadores, email, "Espectador");
+        return buscarPorEmail(espectadores, email, "Espectador");
     }
 
-    private <T extends Persona> T buscar(Repositorio<T> repositorio, String email, String entidad) {
-        return repositorio.obtener(persona -> persona.tieneEmail(email), entidad, "email: " + email);
+    private <T extends Persona> T buscarPorEmail(List<T> personas, String email, String entidad) {
+        for (T p : personas) {
+            if (p.tieneEmail(email)) return p;
+        }
+        throw new EntidadNoEncontradaException(entidad, "email: " + email);
     }
 
-    public List<Director> getDirectores() { return directores.listar(); }
-    public List<Actor> getActores() { return actores.listar(); }
-    public List<Jurado> getJurados() { return jurados.listar(); }
-    public List<Espectador> getEspectadores() { return espectadores.listar(); }
+    // CORRECCION I13: las listas no se pueden modificar desde afuera.
+    public List<Director> getDirectores() { return Collections.unmodifiableList(directores); }
+    public List<Actor> getActores() { return Collections.unmodifiableList(actores); }
+    public List<Jurado> getJurados() { return Collections.unmodifiableList(jurados); }
+    public List<Espectador> getEspectadores() { return Collections.unmodifiableList(espectadores); }
 }

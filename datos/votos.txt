@@ -1,0 +1,18 @@
+ana@gmail.com;The Irishman;4
+carlos@gmail.com;The Irishman;5
+maria@gmail.com;The Irishman;4
+diego@gmail.com;Roma;5
+sofia@gmail.com;Roma;5
+pablo@gmail.com;Roma;4
+vale@gmail.com;Tar;3
+matias@gmail.com;Tar;4
+maria@gmail.com;Oppenheimer;5
+juan@gmail.com;Oppenheimer;4
+laura@gmail.com;Oppenheimer;5
+diego@gmail.com;Volver;3
+vale@gmail.com;Parasite;5
+carlos@gmail.com;Parasite;4
+ana@gmail.com;Barbie;4
+carlos@gmail.com;Barbie;3
+diego@gmail.com;Dune;5
+sofia@gmail.com;Dune;4

@@ -23,36 +23,20 @@ ORGANIZACIÓN DEL PROYECTO
 --------------------------
 El proyecto está organizado en los siguientes paquetes:
 
-  modelo/         → Entidades del dominio, con sus reglas de negocio,
-                    agrupadas por tema:
-    comun/        → Validar y Numerador
-    precios/      → Dinero, Porcentaje y TipoTarifa
-    personas/     → Persona, Artista, Director, Actor, Jurado, Espectador
-    peliculas/    → Pelicula, Calificaciones, Evaluacion, VotoPublico, Genero
-    festival/     → Festival, Edicion, Seccion, Premio, TipoSeccion, Sala
-    funciones/    → Funcion (Presencial / Streaming) y las entradas que emite
-                    (Entrada, EntradaPresencial, EntradaStreaming,
-                    SolicitudEntrada, Butaca)
-    abonos/       → Abono, AbonoTresDias, AbonoFull, AbonoStreaming, TipoAbono
+  modelo/         → Clases que representan las entidades del dominio
   excepciones/    → Excepciones personalizadas del sistema
-  repositorio/    → Interfaz Repositorio<T>, su implementación en memoria
-                    y el Catalogo que reúne todos los datos
-  servicios/      → Coordinan los casos de uso (un servicio por tema)
-    precios/      → Tarifario y reglas de descuento (patrón Strategy)
-  persistencia/   → Interfaz Persistencia y su implementación en archivos
-  inicializacion/ → Precarga de datos de demostración
+  servicios/      → Lógica de negocio del sistema
+  persistencia/   → Lectura y escritura de archivos
   ui/             → Interfaz gráfica (Swing)
-    comun/        → Componentes reutilizables: PanelListado, FormularioDialogo,
-                    DialogoPersona, SelectorPersona, LectorCampos y ComponentesUI
     peliculas/    → Paneles de gestión de películas, directores y actores
-    funciones/    → Panel de funciones y diálogos de alta (DialogoFuncion,
-                    DialogoFuncionPresencial, DialogoFuncionStreaming)
-    entradas/     → Paneles de venta de entradas, abonos y espectadores, y sus
-                    diálogos (DialogoVentaEntrada, DialogoComprarAbono,
-                    DialogoReservaAbono)
+    funciones/    → Panel de gestión de funciones
+    entradas/     → Paneles de venta de entradas, abonos y espectadores
     evaluaciones/ → Paneles de evaluaciones, ganadores y voto del público
-    festival/     → Paneles de ediciones, secciones (DialogoAgregarSeccion) y salas
-  app/            → Clase Main (punto de entrada: arma y conecta las piezas)
+    festival/     → Paneles de ediciones, secciones y salas
+    comun/        → Piezas compartidas: formulario de persona, lectura de
+                    campos, combos, tablas y buscador
+  app/            → Clase Main (punto de entrada)
+  datos/          → Archivos de datos (fuera de src, en la raíz del proyecto)
 
 
 CLASES DEL MODELO
@@ -60,10 +44,9 @@ CLASES DEL MODELO
   - Festival, Edicion, Seccion, Premio
   - TipoSeccion (enum): COMPETENCIA_OFICIAL, CINE_INDEPENDIENTE,
     CORTOMETRAJE, NUEVOS_TALENTOS
-  - Persona (abstract) → Artista (abstract) → Director, Actor
-                       → Jurado, Espectador
-  - Pelicula, Genero (enum), Evaluacion
-  - Calificaciones: evaluaciones, votos y promedios de una película
+  - Persona (abstract) → Director, Actor, Jurado, Espectador
+  - Pelicula, Evaluacion
+  - Genero (enum): DRAMA, COMEDIA, THRILLER, CIENCIA_FICCION, ...
   - Funcion (abstract) → FuncionPresencial, FuncionStreaming
   - Entrada (abstract) → EntradaPresencial, EntradaStreaming
   - Sala
@@ -71,64 +54,56 @@ CLASES DEL MODELO
   - TipoAbono (enum): TRES_DIAS, FULL, STREAMING (con su precio base)
   - TipoTarifa (enum): GENERAL, ESTUDIANTE, JUBILADO
   - VotoPublico
-  - SolicitudEntrada (record): datos con los que se emite una entrada
-  - Butaca (record): número de butaca (las entradas streaming no tienen)
-  - Dinero y Porcentaje: objetos de valor para precios y descuentos
-  - Numerador: números correlativos para los códigos
-  - Validar: validaciones de datos comunes
+
+Las reglas del negocio están en el modelo: cada constructor valida sus
+datos (un objeto nunca se crea en un estado inválido) y cada clase
+controla sus propias reglas (por ejemplo, Pelicula no deja que un
+jurado la evalúe dos veces y Edicion no deja programar funciones fuera
+de sus fechas). Las funciones, entradas y abonos se identifican por
+código (F-1, EP-2, ES-3, AB-4) y las personas por email.
 
 
 SERVICIOS
 ---------
-Las reglas de negocio viven en las clases del modelo (Experto en
-información): por ejemplo, Edicion valida su año y sus fechas,
-FuncionPresencial valida y ocupa la butaca, Abono decide si cubre una
-función y Pelicula controla que el voto sea de alguien con entrada.
-Los servicios coordinan cada caso de uso y dependen de la interfaz
-Repositorio, no de listas concretas. La lógica NO se resuelve en la UI
-ni en el Main.
-
-  SistemaFestival:
-    Crea los servicios y le da a cada uno solo los repositorios que usa.
-    Recibe el reloj (java.time.Clock) desde Main. La ventana principal
-    recibe este objeto y le pasa a cada panel solo los servicios que usa.
-
-  FestivalServicio:
-    Ediciones, secciones (con su premio) y salas. Asocia y quita
-    películas de las secciones. Una película compite en una sola edición
-    (puede estar en varias secciones de esa edición).
+Cada servicio coordina un grupo de casos de uso: busca los objetos y
+llama a los métodos del modelo. La lógica NO se resuelve en la UI ni
+en el Main.
 
   PersonaServicio:
-    Alta y búsqueda de directores, actores, jurados y espectadores.
+    Directores, actores, jurados y espectadores. No permite dos personas
+    del mismo rol con el mismo email. Las búsquedas son por email.
 
   PeliculaServicio:
-    Películas, reparto y eliminación de películas.
+    Películas y su reparto. No permite títulos repetidos y solo elimina
+    películas sin funciones, evaluaciones ni votos.
 
-  EvaluacionServicio:
-    Evaluaciones del jurado y voto del público.
+  FestivalServicio:
+    Gestiona el festival, ediciones, secciones (con su premio) y salas.
+    Asocia y quita películas de las secciones. No permite dos ediciones
+    del mismo año, dos secciones del mismo tipo en una edición ni dos
+    salas con el mismo nombre. Una película compite en una sola edición
+    (puede estar en varias secciones de esa edición), así sus
+    evaluaciones y votos cuentan solo para los premios de esa edición.
 
   FuncionServicio:
-    Programación de funciones presenciales y streaming. Una función se
-    programa a futuro, para una película que compite en una edición y
-    dentro de las fechas de esa edición. En una misma sala no puede haber
-    dos funciones superpuestas (se tiene en cuenta la duración).
+    Programa funciones presenciales y streaming. Solo a futuro, de
+    películas que compiten en una edición y dentro de sus fechas; en las
+    presenciales controla que la sala no esté ocupada (con la duración
+    de la película).
 
   VentaServicio:
-    Venta de entradas sueltas. El precio lo calcula el Tarifario.
+    Venta de entradas sueltas, precios y cancelación de reservas. No
+    vende entradas de funciones que ya comenzaron.
 
   AbonoServicio:
-    Venta de abonos, reservas con abono y cancelación de reservas.
+    Compra de abonos y reservas con abono. Controla que el abono cubra
+    la función y que no se superponga con otra reserva del mismo abono.
 
-  precios/Tarifario:
-    Único lugar que calcula precios, de entradas y de abonos. Aplica una
-    lista de ReglaDescuento (DescuentoPorTarifa y DescuentoCompraAnticipada)
-    y de ReglaDescuentoAbono (DescuentoPorTarifa). Para agregar un
-    descuento nuevo alcanza con escribir otra regla.
+  EvaluacionServicio:
+    Evaluaciones del jurado (0 a 10) y votos del público (1 a 5).
 
-  inicializacion/InicializadorDatos:
-    Ejecuta en orden un Inicializador por tipo de dato (ediciones,
-    secciones, reparto, funciones, entradas, abonos y votos). Solo corre
-    la primera vez (cuando no hay ediciones guardadas).
+  InicializadorDatos:
+    Precarga datos de ejemplo la primera vez que se abre el sistema.
 
 
 INTERFAZ GRÁFICA
@@ -168,30 +143,23 @@ Funcionalidades adicionales implementadas:
 DECISIONES DE DISEÑO
 --------------------
 Persistencia:
-  Se persisten en archivos todos los datos del sistema (ver sección
-  PERSISTENCIA). Las relaciones se guardan por clave: las personas por
-  email, las películas por título y las funciones, entradas y abonos por
-  su código. Los archivos usan formato CSV con comillas, así que un
-  nombre o título con coma no rompe la línea. Si una línea es inválida,
-  se anota el error y se sigue cargando el resto; al terminar se
-  muestran todos los errores juntos.
+  Se guardan todos los datos (ver PERSISTENCIA). Las relaciones entre
+  objetos se guardan por clave: email para las personas, título para
+  las películas y código para funciones, entradas y abonos.
 
-Identidad:
-  Las personas se identifican por email (puede haber dos personas con el
-  mismo nombre). Películas por título, salas por nombre, ediciones por
-  año y funciones, entradas y abonos por código. Todas definen
-  equals/hashCode.
+  Al cargar, los datos se crean con los mismos métodos que usa la
+  aplicación, así se vuelven a validar las reglas. Una línea con
+  errores se saltea y, al final, se muestran todos los errores juntos
+  (archivo y número de línea); el sistema abre igual.
+
+  Cada archivo se escribe primero en un .tmp y después reemplaza al
+  anterior: si algo falla a mitad de camino, el archivo anterior queda
+  intacto.
 
 Butacas:
-  Las butacas son números del 1 a la capacidad de la sala, envueltos en
-  el record Butaca. Las entradas streaming no tienen butaca
-  (Optional vacío).
-
-Fechas:
-  Todo lo que depende de la fecha usa un java.time.Clock que se recibe
-  desde Main, así se puede probar con un reloj fijo. Una función "ya
-  pasó" cuando llegó su fecha y hora de inicio: desde ese momento no se
-  venden entradas, no se reserva y no se cancelan reservas.
+  Las butacas no se modelan como objetos independientes sino como
+  números enteros del 1 a la capacidad de la sala, simplificando
+  el modelo sin perder funcionalidad.
 
 Ganadores:
   El panel de evaluaciones calcula y muestra los ganadores por sección
@@ -199,64 +167,65 @@ Ganadores:
   una nueva evaluación.
 
 Thread de guardado:
-  Al guardar datos (desde el menú Archivo o al cerrar), primero se toma
-  una copia de los datos en el hilo de la interfaz y después esa copia
-  se escribe en un hilo secundario, para que la interfaz no se congele
-  y el hilo no lea listas que la interfaz puede estar modificando. Los
-  guardados se escriben de a uno y en orden. Cada archivo se escribe en
-  un temporal y después se reemplaza, así un error no deja el archivo a
-  medias. Al salir, la ventana espera a que termine el guardado y, si
-  falló, muestra el error y pregunta si salir igual.
+  Al guardar desde el menú Archivo, el texto de los archivos se arma
+  en el hilo de la interfaz y se escribe en un hilo secundario, para
+  que la interfaz no se congele. Mientras guarda, "Guardar datos"
+  queda deshabilitado. El resultado se informa en la barra de estado.
+  Al cerrar, el sistema espera a que termine el guardado y, si falla,
+  muestra el error y permite no salir.
 
 
 EXCEPCIONES PERSONALIZADAS
 --------------------------
   Unchecked (extienden RuntimeException):
-    FestivalException (abstracta, base de todas)
-      ├─ DatoInvalidoException       → dato obligatorio o fuera de rango
-      ├─ EntidadDuplicadaException   → ya existe (email, título, evaluación...)
-      ├─ EntidadNoEncontradaException
-      └─ ReglaNegocioException       → operación no permitida
-           ├─ ButacaOcupadaException
-           ├─ CapacidadExcedidaException
-           ├─ FuncionNoDisponibleException
-           ├─ AbonoInvalidoException
-           └─ VotoInvalidoException
+    FestivalException (abstracta)
+      ├── DatoInvalidoException        falta un dato o está fuera de rango
+      ├── EntidadDuplicadaException    ya existe (email, título, sala...)
+      ├── EntidadNoEncontradaException no se encontró lo buscado
+      └── ReglaNegocioException        una regla del festival no lo permite
+            ├── AbonoInvalidoException
+            ├── ButacaOcupadaException
+            ├── CapacidadExcedidaException
+            ├── FuncionNoDisponibleException
+            └── VotoInvalidoException
 
-  Checked (extiende Exception):
-    PersistenciaException → errores al leer o escribir archivos
-                            (trae la lista de todos los errores)
-
-  La interfaz atrapa FestivalException (no RuntimeException ni Exception),
-  así un error de programación no se disfraza de mensaje para el usuario.
+  Checked (extienden Exception):
+    PersistenciaException  → errores al leer o escribir archivos
+                             (trae la lista de errores)
+    CampoInvalidoException → formato inválido en un campo de un
+                             formulario (en ui/comun)
 
 
 PERSISTENCIA
 ------------
-Archivos persistidos (CSV; los campos con coma o comillas van entre comillas):
-  salas.txt                → nombre, capacidad
-  directores.txt           → nombre, email, nacionalidad
-  actores.txt              → nombre, email, nacionalidad
-  jurados.txt              → nombre, email, nacionalidad
-  espectadores.txt         → nombre, email, nacionalidad
-  peliculas.txt            → título, género, duración, email del director
-  reparto.txt              → título, email del actor
-  evaluaciones.txt         → email del jurado, título, puntaje
-  ediciones.txt            → año, ciudad, fecha inicio, fecha fin
-  secciones.txt            → año, tipo, premio, descripción del premio
-  secciones_peliculas.txt  → año, tipo de sección, título
-  funciones.txt            → código, PRESENCIAL, título, fecha y hora, sala
-                             código, STREAMING, título, fecha y hora, enlace, capacidad
-  abonos.txt               → código, tipo, email, tarifa, precio, días (d1|d2|d3)
-  entradas.txt             → código, código de función, email, precio,
-                             butaca (vacía en streaming), código de abono (vacío
-                             si es suelta)
-  votos.txt                → email del espectador, título, puntaje
+Los archivos están en la carpeta datos/ de la raíz del proyecto, en
+UTF-8. Los campos se separan con ";" (si un texto tiene ";" o comillas,
+va entre comillas).
+
+  salas.txt               → nombre;capacidad
+  directores.txt          → nombre;email;nacionalidad
+  actores.txt             → nombre;email;nacionalidad
+  jurados.txt             → nombre;email;nacionalidad
+  espectadores.txt        → nombre;email;nacionalidad
+  peliculas.txt           → titulo;GENERO;duracion;emailDirector
+  reparto.txt             → titulo;emailActor
+  ediciones.txt           → anio;ciudad;fechaInicio;fechaFin
+  secciones.txt           → anio;TIPO;premio;descripcion
+  secciones_peliculas.txt → anio;TIPO;titulo
+  funciones.txt           → codigo;PRESENCIAL;titulo;fecha;hora;sala
+                            codigo;STREAMING;titulo;fecha;hora;enlace;capacidad
+  evaluaciones.txt        → emailJurado;titulo;puntaje
+  abonos.txt              → codigo;TIPO;emailEspectador;TARIFA;precio;
+                            fechaCompra;dias (solo el abono de 3 días)
+  entradas.txt            → codigo;codigoFuncion;emailEspectador;precio;
+                            codigoAbono (vacío si es suelta);butaca
+                            (vacía si es streaming)
+  votos.txt               → emailEspectador;titulo;puntaje
 
 
 DATOS PRECARGADOS
 -----------------
-Al iniciar el sistema por primera vez se cargan desde archivos:
+La carpeta datos/ trae:
   - 5 salas
   - 11 directores
   - 10 actores
@@ -265,28 +234,23 @@ Al iniciar el sistema por primera vez se cargan desde archivos:
   - 17 películas
   - 42 evaluaciones
 
-Y se inicializan vía inicializacion/InicializadorDatos:
-  - 3 ediciones: 2024-Madrid, 2025-Paris y la edición actual en
-    Buenos Aires, que va desde hoy hasta 30 días después (como las
-    funciones tienen que caer dentro de su edición, la edición actual
-    se calcula a partir de la fecha del día)
+La primera vez (cuando todavía no hay ediciones guardadas) se agregan
+vía InicializadorDatos:
+  - 3 ediciones: Madrid y Paris (los dos años anteriores) y Buenos
+    Aires (el año actual, desde hoy y por 30 días)
   - 4 secciones por edición con sus premios
-  - Asociaciones película-sección (las películas con funciones compiten
-    en la edición actual)
-  - 20 funciones (14 presenciales y 6 streaming)
+  - Asociaciones película-sección y reparto
+  - 20 funciones (14 presenciales y 6 streaming) dentro de la edición
+    actual
   - Algunas entradas vendidas para demostrar ocupación
   - 3 abonos con reservas y 18 votos del público
-
-Al guardar se escriben todos los archivos; en los arranques siguientes
-se usa lo guardado y la demostración ya no se vuelve a generar. Para
-volver a la demostración inicial, borrar ediciones.txt (y los demás
-archivos nuevos).
+Al guardar, todo queda en datos/ y la demo no vuelve a correr.
 
 
 CÓMO EJECUTAR EL SISTEMA
 -------------------------
 1. Compilar el proyecto con IntelliJ IDEA
-2. Colocar los archivos .txt en la carpeta raíz del proyecto
+2. Ejecutar desde la carpeta raíz del proyecto (ahí está datos/)
 3. Ejecutar la clase app.Main
 4. El sistema cargará los datos automáticamente y mostrará
    la ventana principal
@@ -336,9 +300,9 @@ FUNCIONALIDADES AGREGADAS EN ESTE PROYECTO
     Con un abono se reserva lugar en una función sin volver a pagar.
     La reserva es una Entrada con precio 0 asociada al abono.
     Validaciones: el abono debe cubrir la función, la función no puede
-    haber comenzado, dos reservas del mismo abono no pueden superponerse
-    en horario (según la duración de cada película), y se validan butaca
-    y capacidad como en la venta normal.
+    haber comenzado, no puede haber dos reservas del mismo abono que se
+    superpongan (según la duración de cada película), y se validan
+    butaca y capacidad como en la venta normal.
     Las reservas se pueden cancelar (se libera la butaca o el lugar
     virtual). Las entradas sueltas no se cancelan.
 

@@ -1,81 +1,97 @@
 package persistencia;
 
-import modelo.precios.Dinero;
+import excepciones.DatoInvalidoException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 
-// Una línea de un archivo, con acceso a sus campos por posición y las conversiones que usa la carga.
-// Los campos se separan recién cuando se piden: si la línea está mal formada, el error queda en esa línea
-final class Registro {
-    static final String SEPARADOR_LISTA = "|";
-
-    private final String entidad;
+/* CORRECCION P2/P12: una línea leída de un archivo. Cada metodo convierte un campo y, si no puede,
+lanza una DatoInvalidoException que explica qué campo falló, en lugar de un
+NumberFormatException o ArrayIndexOutOfBoundsException que antes cerraba la aplicación.*/
+class Registro {
+    private final String archivo;
     private final int numeroLinea;
-    private final String linea;
-    private List<String> campos;
+    private final List<String> campos;
 
-    Registro(String entidad, int numeroLinea, String linea) {
-        this.entidad = entidad;
+    Registro(String archivo, int numeroLinea, String linea) {
+        this.archivo = archivo;
         this.numeroLinea = numeroLinea;
-        this.linea = linea;
+        this.campos = FormatoLinea.separar(linea);
     }
 
-    private List<String> campos() {
-        if (campos == null) {
-            campos = FormatoCsv.separar(linea);
+    String ubicacion() {
+        return archivo + ", línea " + numeroLinea;
+    }
+
+    String texto(int i) {
+        if (i >= campos.size() || campos.get(i).isBlank()) {
+            throw new DatoInvalidoException("falta el campo " + (i + 1) + ".");
         }
-        return campos;
+        return campos.get(i).trim();
     }
 
-    String texto(int posicion) {
-        if (posicion >= campos().size()) {
-            throw new IllegalArgumentException("falta el campo " + (posicion + 1) + ".");
+    String textoOpcional(int i) {
+        return i < campos.size() ? campos.get(i).trim() : "";
+    }
+
+    int entero(int i) {
+        String valor = texto(i);
+        try {
+            return Integer.parseInt(valor);
+        } catch (NumberFormatException e) {
+            throw new DatoInvalidoException("el campo " + (i + 1) + " ('" + valor + "') no es un número entero.");
         }
-        return campos().get(posicion).trim();
     }
 
-    // Un campo vacío o que no está
-    Optional<String> opcional(int posicion) {
-        if (posicion >= campos().size() || campos().get(posicion).isBlank()) {
-            return Optional.empty();
+    double decimal(int i) {
+        String valor = texto(i);
+        try {
+            return Double.parseDouble(valor);
+        } catch (NumberFormatException e) {
+            throw new DatoInvalidoException("el campo " + (i + 1) + " ('" + valor + "') no es un número.");
         }
-        return Optional.of(campos().get(posicion).trim());
     }
 
-    int entero(int posicion) {
-        return Integer.parseInt(texto(posicion));
+    LocalDate fecha(int i) {
+        return convertirFecha(texto(i), i);
     }
 
-    double decimal(int posicion) {
-        return Double.parseDouble(texto(posicion));
+    LocalTime hora(int i) {
+        String valor = texto(i);
+        try {
+            return LocalTime.parse(valor);
+        } catch (DateTimeParseException e) {
+            throw new DatoInvalidoException("el campo " + (i + 1) + " ('" + valor + "') no es una hora HH:MM.");
+        }
     }
 
-    LocalDate fecha(int posicion) {
-        return LocalDate.parse(texto(posicion));
+    List<LocalDate> fechas(int i) {
+        List<LocalDate> fechas = new ArrayList<>();
+        String valor = textoOpcional(i);
+        if (valor.isEmpty()) return fechas;
+        for (String parte : valor.split(",")) {
+            fechas.add(convertirFecha(parte.trim(), i));
+        }
+        return fechas;
     }
 
-    LocalDateTime fechaHora(int posicion) {
-        return LocalDateTime.parse(texto(posicion));
+    <E extends Enum<E>> E enumerado(int i, Class<E> tipo) {
+        String valor = texto(i);
+        try {
+            return Enum.valueOf(tipo, valor.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new DatoInvalidoException("el campo " + (i + 1) + " ('" + valor + "') no es un valor válido.");
+        }
     }
 
-    Dinero dinero(int posicion) {
-        return Dinero.de(texto(posicion));
-    }
-
-    List<LocalDate> fechas(int posicion) {
-        return Arrays.stream(texto(posicion).split("\\" + SEPARADOR_LISTA)).map(String::trim).map(LocalDate::parse).toList();
-    }
-
-    <E extends Enum<E>> E enumerado(int posicion, Class<E> tipo) {
-        return Enum.valueOf(tipo, texto(posicion).toUpperCase(Locale.ROOT));
-    }
-
-    String describir() {
-        return entidad + " (línea " + numeroLinea + "): " + linea;
+    private LocalDate convertirFecha(String valor, int i) {
+        try {
+            return LocalDate.parse(valor);
+        } catch (DateTimeParseException e) {
+            throw new DatoInvalidoException("el campo " + (i + 1) + " ('" + valor + "') no es una fecha AAAA-MM-DD.");
+        }
     }
 }

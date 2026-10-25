@@ -1,0 +1,205 @@
+========================================================
+CORRECCIONES - SEGUNDA ENTREGA
+========================================================
+
+Aqui se podra encontrar la lista de correciones dentro del archivo. 
+Para encontrarlos, buscar "CORRECCIÓN" en el proyecto (en IntelliJ:Ctrl+Shift+F).
+
+Las correcciones se hicieron sin patrones de diseño: solo herencia,
+clases abstractas, polimorfismo, enums, excepciones propias y
+colecciones.
+
+I - Integridad (reglas del negocio)
+I1 - Se venden entradas de funciones que ya pasaron
+- Dónde: EntradaServicio.venderEntrada*
+- Solución: agregar Funcion.yaComenzo() (fecha + hora) y validarlo antes de vender.
+
+I2 - Reservar y cancelar comparan solo la fecha
+- Una función de hoy a las 10:00 se puede reservar a las 18:00.
+- Solución: usar el mismo yaComenzo().
+
+I3 - Un jurado puede evaluar la misma película varias veces
+- Ya pasa en evaluaciones.txt: Pedro Martinez evaluó Roma dos veces.
+- Solución: Pelicula.fueEvaluadaPor(jurado) y lanzar una excepción.
+
+I4 - Funciones superpuestas en la misma sala
+- Solo se detecta si la hora es exactamente igual. Irishman (209 min) a las 15:00 y otra a las 16:00 se aceptan.
+- Solución: Funcion.getFin() (inicio + duración) y seSuperponeCon(otra).
+
+I5 - Un abono puede reservar dos funciones que se pisan
+- Dónde: Abono.tieneReservaEn
+- Solución: usar seSuperponeCon.
+
+I6 - Funciones fuera de su edición
+- No se controla que la película compita en una edición ni que la fecha caiga dentro de ella.
+- La demo lo rompe: la edición 2026 es en julio, pero sus funciones caen en octubre y noviembre.
+- Solución: Edicion.incluyeFecha(fecha) y validarlo al programar. Calcular las fechas de la demo a partir de hoy.
+
+I7 - Se puede quitar de su sección una película con funciones
+- Solución: si es su última sección y tiene funciones, rechazar.
+
+I8 - No se controlan duplicados
+- Emails repetidos, títulos repetidos, el mismo actor dos veces en una película, salas repetidas (solo lo frena la UI).
+- Solución: validar en el servicio y lanzar EntidadDuplicadaException.
+
+I9 - Hay validaciones que solo están en la UI
+- El modelo acepta duración ≤ 0, capacidad 0 (en streaming da división por cero) y puntajes fuera de rango.
+- El año es inconsistente: la UI rechaza el 2000 y el servicio lo acepta.
+- Solución: validar en los constructores. La UI solo controla el formato.
+
+I10 - Las personas se identifican por nombre
+- Con dos “Laura Martinez”, siempre se elige la primera.
+- Solución: buscar por email y mostrar “nombre <email>“ en los combos.
+
+I11 - Las funciones no tienen código
+- buscarFuncion(titulo, fecha) devuelve la primera del día.
+- Solución: código F-1, F-2…, como ya tienen las entradas y los abonos.
+I12 - Hay ganador aunque nadie haya evaluado
+- Gana la primera película con promedio 0 y no hay criterio de desempate.
+- Solución: ignorar las películas sin evaluaciones y definir un desempate.
+
+I13 - Las listas internas se pueden modificar desde afuera
+- Con getPeliculas().add(...) se saltean las reglas.
+- Solución: devolver Collections.unmodifiableList(...).
+
+I14 - Las relaciones en los dos sentidos se arman a mano
+- Si se olvida un lado, el modelo queda inconsistente.
+- Solución: un solo método del modelo que actualice los dos lados.
+
+
+P - Persistencia
+
+P1 - La app no arranca si se borra un dato de la demo
+- La demo busca “Roma”, “Sala 1”, etc. por nombre fijo, y Main no atrapa el error.
+- Solución: correr la demo solo si no hay datos guardados, y atrapar su error en Main.
+
+P2 - Una línea mal escrita impide abrir la app
+- Solo se atrapa IOException.
+- Solución: try/catch por línea: anotar el error, seguir y mostrar todos los errores al final.
+
+P3 - Se pierden datos sin aviso
+- Una película cuyo director no se encuentra se descarta, y al guardar se pierde para siempre.
+- Solución: informarlo como error de carga y pedir confirmación antes de guardar.
+
+P4 - Si el guardado falla al salir, nadie se entera
+- La ventana se cierra antes de que termine el guardado.
+- Solución: esperar a que termine y, si falla, dar la opción de no salir.
+
+P5 - Solo se guardan 7 de los 14 tipos de datos
+- Ediciones, funciones, entradas, abonos y votos se pierden al cerrar.
+- Solución: un archivo por tipo, con referencias por email, título o código.
+
+P6 - Los archivos se referencian por nombre
+- Película → director y evaluación → jurado.
+- Solución: usar el email.
+
+P7 - La coma se usa como separador sin escape
+- Un título como “Hola, mundo” rompe el archivo.
+- Solución: usar ; y rechazar ese carácter en los textos.
+
+P8 - La escritura no es segura
+- Si falla a mitad de camino, el archivo queda cortado.
+ Solución: escribir en un .tmp y después reemplazar el original.
+
+P9 - El hilo de guardado no está sincronizado
+- Puede chocar con cambios hechos desde la UI.
+- Solución: copiar las listas antes de lanzar el hilo y deshabilitar “Guardar” mientras guarda.
+
+P10 - PersistenciaException pierde la causa
+- Solución: agregar el constructor (mensaje, causa) e indicar el archivo y la línea.
+
+P11 - La ruta depende de desde dónde se ejecuta la app
+- Solución: una carpeta datos/ fija y UTF-8 explícito.
+
+P12 - Hay 14 métodos de lectura y escritura casi iguales
+- Solución: dos métodos privados reutilizables.
+
+P13 - Los datos actuales ya tienen errores
+- La evaluación duplicada y Gravity (91 min) en Cortometraje.
+- Solución: limpiarlos al aplicar I3.
+
+
+S - Code smells
+S1 God Class: EntradaServicio
+- Maneja funciones, espectadores, entradas, abonos y precios.
+- Solución: dividirlo en FuncionServicio, VentaServicio y AbonoServicio.
+
+S2 - Baja cohesión: PeliculaServicio
+- Mezcla personas, evaluaciones, votos y ganadores.
+- Solución: crear PersonaServicio y EvaluacionServicio.
+
+S3 - instanceof en lugar de polimorfismo
+- En los precios, al cancelar una reserva, en los abonos y en tres paneles.
+- Solución: métodos abstractos como getPrecioBase(), getDetalle() y liberarLugar().
+
+S4 - Strings mágicos
+- "TRES_DIAS", "FULL" y "STREAMING" repetidos; el género es texto libre.
+- Solución: enum TipoAbono y enum Genero.
+
+S5 - null como respuesta
+- En las búsquedas, en los ganadores y en Entrada.abono.
+- Solución: lanzar EntidadNoEncontradaException o devolver Optional.
+
+S6 - Excepciones genéricas
+- Todo es FestivalException, y la UI atrapa Exception, así que un error real se muestra como “Error: null”.
+- Solución: subclases específicas y un último catch con “Error inesperado”.
+
+S7 - Lógica de negocio en la UI
+- PanelAbonos, PanelVotoPublico, PanelSecciones y PanelSalas deciden cosas que le tocan al servicio.
+- Solución: pasarlo a métodos de los servicios.
+
+S8 - Paneles largos y código copiado
+- PanelFunciones tiene 508 líneas, la validación de fecha está copiada 4 veces y hay 4 formularios de persona casi iguales.
+- Solución: una clase LectorCampos y un DialogoPersona reutilizable.
+
+S9 - Paneles muy acoplados
+- Cada panel recibe la ventana entera.
+- Solución: pasarle solo los servicios que usa.
+
+S10 - Selección por posición en combos y tablas
+- Si la lista se ordena o se filtra, se elige el objeto equivocado.
+- Solución: combos que guarden los objetos directamente.
+
+S11 - LocalDate.now() repartido por todo el código
+- Solución: pasar un Clock por constructor para poder probar con una fecha fija.
+
+S12 - double para el dinero
+- Solución: BigDecimal.
+
+S13 - Cadenas de getters
+- Por ejemplo, entrada.getFuncion().getPelicula().getTitulo().
+- Solución: métodos como entrada.esPara(pelicula).
+
+S14 - Duplicación en la demo
+- Las mismas 17 búsquedas aparecen dos veces.
+- Solución: buscar una sola vez.
+
+S15 - Comparación con ==
+- Se rompe al cargar desde archivos.
+- Solución: equals por clave (email, título, código).
+
+S16 - Código muerto o confuso
+- Solución: limpiarlo junto con B1.
+
+B - Bugs puntuales
+
+B1 - La demo asigna entradas a la función equivocada
+- Las entradas de “Parasite 20:00” quedan en la función de las 16:00.
+- Solución: buscar también por hora o por código.
+
+B2 - Los buscadores fallan con ( o [
+- Pasa en 6 paneles.
+- Solución: usar Pattern.quote(texto).
+
+CAMBIOS QUE HAY QUE CONOCER
+---------------------------
+  - Los archivos de datos se movieron de la raíz a la carpeta datos/ y
+    cambiaron de formato (";" y referencias por email). Hay que ejecutar
+    el sistema desde la raíz del proyecto.
+  - En la demo, las películas con funciones (The Irishman, Roma, Tar, Dune,
+    Grand Budapest, etc.) ahora compiten en la edición actual, porque una
+    función tiene que caer dentro de la edición de su película (I6).
+  - Las ediciones de la demo usan el año actual y los dos anteriores.
+  - La tabla de directores tiene una columna nueva, "Películas".
+  - Al cargar evaluación por evaluación se vuelve a validar todo, así que una
+    evaluación repetida o con puntaje fuera de rango aparece como error de carga.

@@ -1,0 +1,11 @@
+Martin Scorsese;martin@cine.com;Americana
+Alfonso Cuaron;alfonso@cine.com;Mexicana
+Todd Field;todd@cine.com;Americana
+Christopher Nolan;nolan@cine.com;Britanica
+Pedro Almodovar;almodovar@cine.com;Española
+Bong Joon Ho;bong@cine.com;Coreana
+Greta Gerwig;greta@cine.com;Americana
+Wes Anderson;wes@cine.com;Americana
+Denis Villeneuve;denis@cine.com;Canadiense
+Damien Chazelle;damien@cine.com;Americana
+Steven Spielberg;spilgber@director.com;Americana

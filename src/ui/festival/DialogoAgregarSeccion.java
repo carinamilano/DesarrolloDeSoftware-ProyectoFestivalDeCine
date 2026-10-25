@@ -1,50 +1,68 @@
 package ui.festival;
 
-import modelo.festival.Edicion;
-import modelo.festival.Seccion;
-import modelo.festival.TipoSeccion;
+import excepciones.FestivalException;
+import modelo.Edicion;
+import modelo.TipoSeccion;
 import servicios.FestivalServicio;
 import ui.comun.ComponentesUI;
-import ui.comun.FormularioDialogo;
 
-import javax.swing.JComboBox;
-import javax.swing.JTextField;
-import java.awt.Window;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.*;
+import java.awt.*;
 
-// Alta de una sección con su premio (antes era un método largo dentro de PanelSecciones)
-class DialogoAgregarSeccion {
-    private final Window padre;
-    private final FestivalServicio festivalServicio;
-    private final Edicion edicion;
+// CORRECCION S8: el diálogo de alta de sección salió de PanelSecciones a su propia clase.
+public class DialogoAgregarSeccion extends JDialog {
+    private TipoSeccion tipoAgregado;
 
-    DialogoAgregarSeccion(Window padre, FestivalServicio festivalServicio, Edicion edicion) {
-        this.padre = padre;
-        this.festivalServicio = festivalServicio;
-        this.edicion = edicion;
+    public DialogoAgregarSeccion(Window padre, FestivalServicio festivalServicio, Edicion edicion) {
+        super(padre, "Agregar sección - Edición " + edicion.getAnio(), ModalityType.APPLICATION_MODAL);
+        setSize(440, 250);
+        setLocationRelativeTo(padre);
+        setLayout(new BorderLayout(10, 10));
+
+        // Solo se ofrecen los tipos que la edición todavía no tiene
+        JComboBox<TipoSeccion> comboTipo = new JComboBox<>(edicion.getTiposSinSeccion().toArray(new TipoSeccion[0]));
+        JTextField campoPremio = new JTextField();
+        JTextField campoDescripcion = new JTextField();
+
+        JPanel panelCampos = ComponentesUI.crearPanelCampos(3);
+        panelCampos.add(new JLabel("Tipo de sección:"));
+        panelCampos.add(comboTipo);
+        panelCampos.add(new JLabel("Nombre del premio:"));
+        panelCampos.add(campoPremio);
+        panelCampos.add(new JLabel("Descripción del premio:"));
+        panelCampos.add(campoDescripcion);
+
+        JLabel labelError = ComponentesUI.crearLabelError();
+        JButton btnAceptar = new JButton("Aceptar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        campoPremio.addActionListener(e -> campoDescripcion.requestFocus());
+        campoDescripcion.addActionListener(e -> btnAceptar.doClick());
+        btnCancelar.addActionListener(e -> dispose());
+
+        btnAceptar.addActionListener(e -> {
+            TipoSeccion tipo = ComponentesUI.seleccionado(comboTipo);
+            try {
+                festivalServicio.registrarSeccion(edicion, tipo, campoPremio.getText(), campoDescripcion.getText());
+                tipoAgregado = tipo;
+                dispose();
+            } catch (FestivalException ex) {
+                labelError.setText(ex.getMessage());
+            } catch (RuntimeException ex) {
+                labelError.setText(ComponentesUI.errorInesperado(ex));
+            }
+        });
+
+        add(panelCampos, BorderLayout.CENTER);
+        add(ComponentesUI.crearPanelSur(labelError, btnAceptar, btnCancelar), BorderLayout.SOUTH);
     }
 
-    // Devuelve la sección registrada, o vacío si se canceló
-    Optional<Seccion> mostrar() {
-        // Solo se ofrecen los tipos que la edición todavía no tiene
-        List<TipoSeccion> disponibles = edicion.getTiposSinSeccion();
+    public boolean mostrar() {
+        setVisible(true);
+        return tipoAgregado != null;
+    }
 
-        FormularioDialogo formulario = new FormularioDialogo(padre, "Agregar sección - Edición " + edicion.getAnio(), 440, 250);
-        JComboBox<TipoSeccion> comboTipo = formulario.agregarCampo("Tipo de sección:",
-                new JComboBox<>(disponibles.toArray(new TipoSeccion[0])));
-        JTextField campoPremio = formulario.agregarCampo("Nombre del premio:", new JTextField());
-        JTextField campoDescripcion = formulario.agregarCampo("Descripción del premio:", new JTextField());
-        formulario.encadenarEnter(campoPremio, campoDescripcion);
-
-        AtomicReference<Seccion> registrada = new AtomicReference<>();
-        formulario.alAceptar(() -> {
-            registrada.set(festivalServicio.registrarSeccion(edicion.getAnio(), ComponentesUI.seleccionado(comboTipo),
-                    campoPremio.getText(), campoDescripcion.getText()));
-            formulario.cerrar();
-        });
-        formulario.mostrar();
-        return Optional.ofNullable(registrada.get());
+    public TipoSeccion getTipoAgregado() {
+        return tipoAgregado;
     }
 }

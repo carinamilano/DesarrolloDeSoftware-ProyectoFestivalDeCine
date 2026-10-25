@@ -1,12 +1,13 @@
 package ui.comun;
 
-import javax.swing.JComponent;
+import javax.swing.*;
 
-// Error de formato en un campo del formulario: se muestra el mensaje y se vuelve el foco al campo
+/* CORRECCIÓN S6/S8: error de formato en un campo de un formulario (vacío, no es número, no es fecha...).
+Trae el campo para poder darle el foco al mostrar el mensaje.*/
 public class CampoInvalidoException extends Exception {
-    private final transient JComponent campo;
+    private final JComponent campo;
 
-    public CampoInvalidoException(JComponent campo, String mensaje) {
+    public CampoInvalidoException(String mensaje, JComponent campo) {
         super(mensaje);
         this.campo = campo;
     }

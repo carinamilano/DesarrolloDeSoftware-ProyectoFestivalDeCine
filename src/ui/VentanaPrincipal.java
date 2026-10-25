@@ -2,8 +2,7 @@ package ui;
 
 import excepciones.PersistenciaException;
 import persistencia.Persistencia;
-import servicios.SistemaFestival;
-import ui.comun.ComponentesUI;
+import servicios.*;
 import ui.entradas.PanelAbonos;
 import ui.entradas.PanelEspectadores;
 import ui.entradas.PanelVentaEntradas;
@@ -19,32 +18,33 @@ import ui.peliculas.PanelPeliculas;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.List;
+import java.util.Map;
 
 public class VentanaPrincipal extends JFrame {
-    private static final Color COLOR_FONDO = new Color(245, 245, 245);
 
-    private final SistemaFestival sistema;
-    private final Persistencia persistencia;
-    // Un solo hilo de guardado: si se guarda dos veces seguidas, los guardados se escriben en orden.
-    // Es daemon para que no impida que el programa termine
-    private final ExecutorService hiloGuardado = Executors.newSingleThreadExecutor(tarea -> {
-        Thread hilo = new Thread(tarea, "guardado-de-datos");
-        hilo.setDaemon(true);
-        return hilo;
-    });
+    private PersonaServicio personaServicio;
+    private PeliculaServicio peliculaServicio;
+    private FestivalServicio festivalServicio;
+    private FuncionServicio funcionServicio;
+    private VentaServicio ventaServicio;
+    private AbonoServicio abonoServicio;
+    private EvaluacionServicio evaluacionServicio;
+    private Persistencia persistencia;
     private JPanel panelCentral;
     private JLabel barraEstado;
+    private JMenuItem itemGuardar;
+    private Thread hiloGuardado;
+    private boolean erroresDeCargaConfirmados;
 
-    // Depende de la abstracción Persistencia, no de cómo se guardan los datos (DIP)
-    public VentanaPrincipal(SistemaFestival sistema, Persistencia persistencia) {
-        this.sistema = sistema;
+    public VentanaPrincipal(PersonaServicio personaServicio, PeliculaServicio peliculaServicio, FestivalServicio festivalServicio, FuncionServicio funcionServicio, VentaServicio ventaServicio, AbonoServicio abonoServicio, EvaluacionServicio evaluacionServicio, Persistencia persistencia) {
+        this.personaServicio = personaServicio;
+        this.peliculaServicio = peliculaServicio;
+        this.festivalServicio = festivalServicio;
+        this.funcionServicio = funcionServicio;
+        this.ventaServicio = ventaServicio;
+        this.abonoServicio = abonoServicio;
+        this.evaluacionServicio = evaluacionServicio;
         this.persistencia = persistencia;
 
         configurarVentana();
@@ -59,65 +59,136 @@ public class VentanaPrincipal extends JFrame {
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        addWindowListener(new WindowAdapter() {
+        addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
-            public void windowClosing(WindowEvent e) {
+            public void windowClosing(java.awt.event.WindowEvent e) {
                 confirmarSalida();
             }
         });
     }
 
-    // Esta clase es la única que conoce a SistemaFestival: a cada panel le pasa solo los servicios que usa
-    // (antes los paneles hacían ventana.getSistema().getXServicio())
+    /* CORRECCIÓN S9: cada panel recibe solo los servicios que usa, antes recibía la ventana entera
+    y le pedía los servicios con getters.*/
     private void construirBarraMenu() {
         JMenuBar menuBar = new JMenuBar();
 
         JMenu menuArchivo = new JMenu("Archivo");
-        menuArchivo.add(crearItem("Guardar datos", this::guardarEnSegundoPlano));
+
+        itemGuardar = new JMenuItem("Guardar datos");
+        itemGuardar.addActionListener(e -> guardarEnSegundoPlano());
+
+        JMenuItem itemSalir = new JMenuItem("Salir");
+        itemSalir.addActionListener(e -> confirmarSalida());
+
+        menuArchivo.add(itemGuardar);
         menuArchivo.addSeparator();
-        menuArchivo.add(crearItem("Salir", this::confirmarSalida));
+        menuArchivo.add(itemSalir);
 
         JMenu menuFestival = new JMenu("Festival");
-        agregarOpcion(menuFestival, "Ediciones", "Gestión de ediciones",
-                () -> new PanelEdiciones(this, sistema.getFestivalServicio()));
-        agregarOpcion(menuFestival, "Secciones", "Gestión de secciones",
-                () -> new PanelSecciones(this, sistema.getFestivalServicio()));
-        agregarOpcion(menuFestival, "Salas", "Gestión de salas",
-                () -> new PanelSalas(this, sistema.getFestivalServicio()));
+
+        JMenuItem itemEdiciones = new JMenuItem("Ediciones");
+        itemEdiciones.addActionListener(e -> {
+            mostrarPanel(new PanelEdiciones(this, festivalServicio));
+            setEstado("Gestión de ediciones");
+        });
+
+        JMenuItem itemSecciones = new JMenuItem("Secciones");
+        itemSecciones.addActionListener(e -> {
+            mostrarPanel(new PanelSecciones(this, festivalServicio));
+            setEstado("Gestión de secciones");
+        });
+
+        JMenuItem itemSalas = new JMenuItem("Salas");
+        itemSalas.addActionListener(e -> {
+            mostrarPanel(new PanelSalas(this, festivalServicio));
+            setEstado("Gestión de salas");
+        });
+
+        menuFestival.add(itemEdiciones);
+        menuFestival.add(itemSecciones);
+        menuFestival.add(itemSalas);
 
         JMenu menuPeliculas = new JMenu("Películas");
-        agregarOpcion(menuPeliculas, "Gestionar películas", "Gestión de películas",
-                () -> new PanelPeliculas(this, sistema.getPeliculaServicio(), sistema.getPersonaServicio()));
-        agregarOpcion(menuPeliculas, "Directores", "Gestión de directores",
-                () -> new PanelDirectores(this, sistema.getPersonaServicio()));
-        agregarOpcion(menuPeliculas, "Actores", "Gestión de actores",
-                () -> new PanelActores(this, sistema.getPersonaServicio(), sistema.getPeliculaServicio()));
+
+        JMenuItem itemPeliculas = new JMenuItem("Gestionar películas");
+        itemPeliculas.addActionListener(e -> {
+            mostrarPanel(new PanelPeliculas(this, peliculaServicio, personaServicio));
+            setEstado("Gestión de películas");
+        });
+
+        JMenuItem itemDirectores = new JMenuItem("Directores");
+        itemDirectores.addActionListener(e -> {
+            mostrarPanel(new PanelDirectores(this, personaServicio));
+            setEstado("Gestión de directores");
+        });
+
+        JMenuItem itemActores = new JMenuItem("Actores");
+        itemActores.addActionListener(e -> {
+            mostrarPanel(new PanelActores(this, personaServicio, peliculaServicio));
+            setEstado("Gestión de actores");
+        });
+
+        menuPeliculas.add(itemPeliculas);
+        menuPeliculas.add(itemDirectores);
+        menuPeliculas.add(itemActores);
 
         JMenu menuFunciones = new JMenu("Funciones");
-        agregarOpcion(menuFunciones, "Gestionar funciones", "Gestión de funciones",
-                () -> new PanelFunciones(this, sistema.getFuncionServicio(), sistema.getFestivalServicio()));
+
+        JMenuItem itemFunciones = new JMenuItem("Gestionar funciones");
+        itemFunciones.addActionListener(e -> {
+            mostrarPanel(new PanelFunciones(this, funcionServicio, festivalServicio, peliculaServicio));
+            setEstado("Gestión de funciones");
+        });
+
+        menuFunciones.add(itemFunciones);
 
         JMenu menuEntradas = new JMenu("Entradas");
-        agregarOpcion(menuEntradas, "Venta de entradas", "Venta de entradas",
-                () -> new PanelVentaEntradas(this, sistema.getVentaServicio(), sistema.getFuncionServicio(),
-                        sistema.getPersonaServicio()));
-        agregarOpcion(menuEntradas, "Abonos", "Abonos del festival",
-                () -> new PanelAbonos(this, sistema.getAbonoServicio(), sistema.getFuncionServicio(),
-                        sistema.getPersonaServicio()));
-        agregarOpcion(menuEntradas, "Espectadores", "Gestión de espectadores",
-                () -> new PanelEspectadores(this, sistema.getPersonaServicio()));
+
+        JMenuItem itemVentaEntradas = new JMenuItem("Venta de entradas");
+        itemVentaEntradas.addActionListener(e -> {
+            mostrarPanel(new PanelVentaEntradas(this, ventaServicio, funcionServicio, personaServicio));
+            setEstado("Venta de entradas");
+        });
+
+        JMenuItem itemEspectadores = new JMenuItem("Espectadores");
+        itemEspectadores.addActionListener(e -> {
+            mostrarPanel(new PanelEspectadores(this, personaServicio));
+            setEstado("Gestión de espectadores");
+        });
+
+        JMenuItem itemAbonos = new JMenuItem("Abonos");
+        itemAbonos.addActionListener(e -> {
+            mostrarPanel(new PanelAbonos(this, abonoServicio, funcionServicio, personaServicio));
+            setEstado("Abonos del festival");
+        });
+
+        menuEntradas.add(itemVentaEntradas);
+        menuEntradas.add(itemAbonos);
+        menuEntradas.add(itemEspectadores);
 
         JMenu menuEvaluaciones = new JMenu("Evaluaciones");
-        agregarOpcion(menuEvaluaciones, "Evaluaciones y ganadores", "Evaluaciones y ganadores",
-                () -> new PanelEvaluaciones(this, sistema.getEvaluacionServicio(), sistema.getPeliculaServicio(),
-                        sistema.getPersonaServicio(), sistema.getFestivalServicio()));
-        agregarOpcion(menuEvaluaciones, "Voto del público", "Voto del público",
-                () -> new PanelVotoPublico(this, sistema.getEvaluacionServicio(), sistema.getPeliculaServicio(),
-                        sistema.getPersonaServicio(), sistema.getFestivalServicio()));
+
+        JMenuItem itemEvaluaciones = new JMenuItem("Evaluaciones y ganadores");
+        itemEvaluaciones.addActionListener(e -> {
+            mostrarPanel(new PanelEvaluaciones(this, evaluacionServicio, peliculaServicio, personaServicio, festivalServicio));
+            setEstado("Evaluaciones y ganadores");
+        });
+
+        JMenuItem itemVotoPublico = new JMenuItem("Voto del público");
+        itemVotoPublico.addActionListener(e -> {
+            mostrarPanel(new PanelVotoPublico(this, evaluacionServicio, peliculaServicio, personaServicio, festivalServicio));
+            setEstado("Voto del público");
+        });
+
+        menuEvaluaciones.add(itemEvaluaciones);
+        menuEvaluaciones.add(itemVotoPublico);
 
         JMenu menuAyuda = new JMenu("Ayuda");
-        menuAyuda.add(crearItem("Acerca de...", this::mostrarAcercaDe));
 
+        JMenuItem itemAcercaDe = new JMenuItem("Acerca de...");
+        itemAcercaDe.addActionListener(e -> mostrarAcercaDe());
+
+        menuAyuda.add(itemAcercaDe);
         menuBar.add(menuArchivo);
         menuBar.add(menuFestival);
         menuBar.add(menuPeliculas);
@@ -125,40 +196,43 @@ public class VentanaPrincipal extends JFrame {
         menuBar.add(menuEntradas);
         menuBar.add(menuEvaluaciones);
         menuBar.add(menuAyuda);
+
         setJMenuBar(menuBar);
-    }
-
-    private JMenuItem crearItem(String texto, Runnable accion) {
-        JMenuItem item = new JMenuItem(texto);
-        item.addActionListener(e -> accion.run());
-        return item;
-    }
-
-    // Cada opción del menú muestra un panel y actualiza la barra de estado
-    private void agregarOpcion(JMenu menu, String texto, String estado, Supplier<JPanel> crearPanel) {
-        menu.add(crearItem(texto, () -> {
-            mostrarPanel(crearPanel.get());
-            setEstado(estado);
-        }));
     }
 
     private void construirPanelCentral() {
         panelCentral = new JPanel(new GridBagLayout());
-        panelCentral.setBackground(COLOR_FONDO);
+        panelCentral.setBackground(new Color(245, 245, 245));
 
         JPanel panelBienvenida = new JPanel();
         panelBienvenida.setLayout(new BoxLayout(panelBienvenida, BoxLayout.Y_AXIS));
-        panelBienvenida.setBackground(COLOR_FONDO);
+        panelBienvenida.setBackground(new Color(245, 245, 245));
 
-        JLabel labelTitulo = crearEtiquetaCentrada("Festival Internacional de Cine", new Font("SansSerif", Font.BOLD, 26), new Color(30, 30, 30));
-        JLabel labelSubtitulo = crearEtiquetaCentrada("Sistema de Gestión", new Font("SansSerif", Font.PLAIN, 16), new Color(100, 100, 100));
+        JLabel labelImagen = new JLabel();
+        java.net.URL imgUrl = getClass().getClassLoader().getResource("cine.jpg");
+        if (imgUrl != null) {
+            ImageIcon iconOriginal = new ImageIcon(imgUrl);
+            Image imgEscalada = iconOriginal.getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
+            labelImagen.setIcon(new ImageIcon(imgEscalada));
+        }
+        labelImagen.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel labelTitulo = new JLabel("Festival Internacional de Cine");
+        labelTitulo.setFont(new Font("SansSerif", Font.BOLD, 26));
+        labelTitulo.setForeground(new Color(30, 30, 30));
+        labelTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel labelSubtitulo = new JLabel("Sistema de Gestión");
+        labelSubtitulo.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        labelSubtitulo.setForeground(new Color(100, 100, 100));
+        labelSubtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JSeparator separador = new JSeparator();
         separador.setMaximumSize(new Dimension(400, 2));
         separador.setForeground(new Color(180, 180, 180));
         separador.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        panelBienvenida.add(crearImagen());
+        panelBienvenida.add(labelImagen);
         panelBienvenida.add(Box.createRigidArea(new Dimension(0, 15)));
         panelBienvenida.add(labelTitulo);
         panelBienvenida.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -168,25 +242,6 @@ public class VentanaPrincipal extends JFrame {
 
         panelCentral.add(panelBienvenida);
         add(panelCentral, BorderLayout.CENTER);
-    }
-
-    private JLabel crearImagen() {
-        JLabel labelImagen = new JLabel();
-        URL urlImagen = getClass().getClassLoader().getResource("cine.jpg");
-        if (urlImagen != null) {
-            Image imagen = new ImageIcon(urlImagen).getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
-            labelImagen.setIcon(new ImageIcon(imagen));
-        }
-        labelImagen.setAlignmentX(Component.CENTER_ALIGNMENT);
-        return labelImagen;
-    }
-
-    private JLabel crearEtiquetaCentrada(String texto, Font fuente, Color color) {
-        JLabel etiqueta = new JLabel(texto);
-        etiqueta.setFont(fuente);
-        etiqueta.setForeground(color);
-        etiqueta.setAlignmentX(Component.CENTER_ALIGNMENT);
-        return etiqueta;
     }
 
     private void construirBarraEstado() {
@@ -208,62 +263,93 @@ public class VentanaPrincipal extends JFrame {
         panelCentral.repaint();
     }
 
-    // ========== GUARDADO ==========
 
+    /* CORRECCION P9: el texto de los archivos se arma acá, en el hilo de la interfaz, y el hilo
+    secundario solo lo escribe; así no recorre listas que la interfaz puede estar modificando.
+    Mientras guarda, "Guardar datos" queda deshabilitado para no lanzar dos guardados a la vez.*/
     public void guardarEnSegundoPlano() {
-        guardar(() -> setEstado("Datos guardados correctamente."),
-                ex -> setEstado("Error al guardar: " + ex.getMessage()));
+        if (guardadoEnCurso() || !confirmarGuardadoConErroresDeCarga()) return;
+        Map<String, List<String>> archivos = persistencia.prepararGuardado();
+        itemGuardar.setEnabled(false);
+        setEstado("Guardando datos...");
+
+        hiloGuardado = new Thread(() -> {
+            String error = escribir(archivos);
+            SwingUtilities.invokeLater(() -> {
+                itemGuardar.setEnabled(true);
+                setEstado(error == null ? "Datos guardados correctamente." : "Error al guardar: " + error);
+            });
+        });
+        hiloGuardado.start();
     }
 
-    // La copia de los datos se toma acá, en el hilo de la UI (el único que modifica el modelo);
-    // el hilo de guardado solo escribe esa copia. Antes el hilo leía las listas del modelo
-    // mientras la UI las podía estar modificando
-    private void guardar(Runnable alTerminar, Consumer<PersistenciaException> alFallar) {
-        setEstado("Guardando datos...");
-        Persistencia.Guardado guardado = persistencia.prepararGuardado();
-        hiloGuardado.execute(() -> {
-            try {
-                guardado.escribir();
-                SwingUtilities.invokeLater(alTerminar);
-            } catch (PersistenciaException ex) {
-                SwingUtilities.invokeLater(() -> alFallar.accept(ex));
-            }
-        });
+    private boolean guardadoEnCurso() {
+        return hiloGuardado != null && hiloGuardado.isAlive();
     }
+
+    private String escribir(Map<String, List<String>> archivos) {
+        try {
+            persistencia.escribir(archivos);
+            return null;
+        } catch (PersistenciaException ex) {
+            return ex.getMessage() + " " + ex.getErrores();
+        }
+    }
+
+    // CORRECCION P3: si al abrir hubo líneas que no se pudieron cargar, se avisa que al guardar se pierden.
+    private boolean confirmarGuardadoConErroresDeCarga() {
+        if (!persistencia.huboErroresDeCarga() || erroresDeCargaConfirmados) return true;
+        int opcion = JOptionPane.showConfirmDialog(this,
+                "Al abrir el sistema hubo líneas de los archivos que no se pudieron cargar.\n"
+                        + "Si guarda ahora, esas líneas se van a perder. ¿Desea guardar igual?",
+                "Guardar datos", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        erroresDeCargaConfirmados = opcion == JOptionPane.YES_OPTION;
+        return erroresDeCargaConfirmados;
+    }
+
 
     private void mostrarAcercaDe() {
-        JOptionPane.showMessageDialog(this,
+        JOptionPane.showMessageDialog(
+                this,
                 "Sistema de Gestión de Festival de Cine\nVersión 2.0\nDesarrollado con Java Swing\n\n© 2026 - Milano, Carina Victoria",
-                "Acerca de", JOptionPane.INFORMATION_MESSAGE);
+                "Acerca de",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
-    // Si se elige guardar, la ventana espera a que termine el guardado y, si falló, lo avisa
-    // y pregunta si salir igual (antes se cerraba sin esperar y el error no se veía)
+    /* CORRECCION P4: al salir se espera a que termine el guardado y, si falla, se muestra el error
+    y se puede elegir no salir. Antes la ventana se cerraba enseguida y el error no se veía.*/
     private void confirmarSalida() {
-        int opcion = JOptionPane.showConfirmDialog(this,
-                "¿Desea guardar los datos antes de salir?", "Confirmar salida",
-                JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        int opcion = JOptionPane.showConfirmDialog(
+                this,
+                "¿Desea guardar los datos antes de salir?",
+                "Confirmar salida",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
         if (opcion == JOptionPane.YES_OPTION) {
-            setEnabled(false);
-            guardar(this::salir, this::avisarErrorAlSalir);
+            esperarGuardadoEnCurso();
+            if (!confirmarGuardadoConErroresDeCarga()) return;
+            String error = escribir(persistencia.prepararGuardado());
+            if (error != null) {
+                int salir = JOptionPane.showConfirmDialog(this,
+                        "No se pudieron guardar los datos:\n" + error + "\n\n¿Desea salir igual?",
+                        "Error al guardar", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+                if (salir != JOptionPane.YES_OPTION) return;
+            }
+            dispose();
         } else if (opcion == JOptionPane.NO_OPTION) {
-            salir();
+            esperarGuardadoEnCurso();
+            dispose();
         }
-        // cancel no hace nada, vuelve a la app
     }
 
-    private void avisarErrorAlSalir(PersistenciaException ex) {
-        setEnabled(true);
-        setEstado("Error al guardar: " + ex.getMessage());
-        boolean salirIgual = ComponentesUI.confirmar(this,
-                "No se pudieron guardar los datos:\n" + String.join("\n", ex.getErrores())
-                        + "\n\n¿Desea salir de todos modos? Se perderán los cambios no guardados.",
-                "Error al guardar");
-        if (salirIgual) salir();
-    }
-
-    private void salir() {
-        hiloGuardado.shutdown();
-        dispose();
+    private void esperarGuardadoEnCurso() {
+        if (!guardadoEnCurso()) return;
+        try {
+            hiloGuardado.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

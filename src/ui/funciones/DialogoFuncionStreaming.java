@@ -1,47 +1,107 @@
 package ui.funciones;
 
-import modelo.funciones.Funcion;
-import modelo.peliculas.Pelicula;
+import excepciones.FestivalException;
+import modelo.Edicion;
+import modelo.Funcion;
+import modelo.FuncionStreaming;
+import modelo.Pelicula;
+import servicios.FestivalServicio;
 import servicios.FuncionServicio;
 import ui.comun.CampoInvalidoException;
-import ui.comun.FormularioDialogo;
+import ui.comun.ComponentesUI;
 import ui.comun.LectorCampos;
 
-import javax.swing.JTextField;
-import java.awt.Window;
-import java.time.LocalDateTime;
+import javax.swing.*;
+import java.awt.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
-class DialogoFuncionStreaming extends DialogoFuncion {
-    private JTextField campoEnlace;
-    private JTextField campoCapacidad;
+// CORRECCION S8: el diálogo salió de PanelFunciones a su propia clase y usa LectorCampos.
+public class DialogoFuncionStreaming extends JDialog {
+    private Funcion funcionCreada;
 
-    DialogoFuncionStreaming(Window padre, FuncionServicio funcionServicio) {
-        super(padre, funcionServicio);
+    public DialogoFuncionStreaming(Window padre, FuncionServicio funcionServicio, FestivalServicio festivalServicio) {
+        super(padre, "Agregar función streaming", ModalityType.APPLICATION_MODAL);
+        setSize(460, 340);
+        setLocationRelativeTo(padre);
+        setLayout(new BorderLayout(10, 10));
+
+        // CORRECCION I6/S10: solo películas que compiten en una edición, guardadas como objetos en el combo.
+        JComboBox<Pelicula> comboPelicula = ComponentesUI.crearComboPeliculas(festivalServicio.peliculasQueCompiten());
+        JLabel labelEdicion = new JLabel();
+        labelEdicion.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        JTextField campoEnlace = new JTextField();
+        JTextField campoCapacidad = new JTextField();
+        JTextField campoFecha = new JTextField();
+        JTextField campoHorario = new JTextField();
+
+        JPanel panelCampos = ComponentesUI.crearPanelCampos(6);
+        panelCampos.add(new JLabel("Película:"));
+        panelCampos.add(comboPelicula);
+        panelCampos.add(new JLabel("Edición:"));
+        panelCampos.add(labelEdicion);
+        panelCampos.add(new JLabel("Enlace:"));
+        panelCampos.add(campoEnlace);
+        panelCampos.add(new JLabel("Capacidad virtual (max " + FuncionStreaming.CAPACIDAD_MAXIMA + "):"));
+        panelCampos.add(campoCapacidad);
+        panelCampos.add(new JLabel("Fecha (YYYY-MM-DD):"));
+        panelCampos.add(campoFecha);
+        panelCampos.add(new JLabel("Horario (HH:MM):"));
+        panelCampos.add(campoHorario);
+
+        Runnable mostrarEdicion = () -> {
+            Pelicula p = ComponentesUI.seleccionado(comboPelicula);
+            if (p == null) {
+                labelEdicion.setText("-");
+                return;
+            }
+            Edicion e = festivalServicio.buscarEdicionDe(p);
+            labelEdicion.setText(e.getAnio() + ": del " + e.getFechaInicio() + " al " + e.getFechaFin());
+        };
+        comboPelicula.addActionListener(e -> mostrarEdicion.run());
+        mostrarEdicion.run();
+
+        JLabel labelError = ComponentesUI.crearLabelError();
+        JButton btnAceptar = new JButton("Aceptar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        campoEnlace.addActionListener(e -> campoCapacidad.requestFocus());
+        campoCapacidad.addActionListener(e -> campoFecha.requestFocus());
+        campoFecha.addActionListener(e -> campoHorario.requestFocus());
+        campoHorario.addActionListener(e -> btnAceptar.doClick());
+        btnCancelar.addActionListener(e -> dispose());
+
+        /* CORRECCION I9/S7: el rango de la capacidad lo valida FuncionStreaming (antes solo este diálogo)
+        y las reglas de fecha y edición las controla FuncionServicio.*/
+        btnAceptar.addActionListener(e -> {
+            try {
+                String enlace = LectorCampos.texto(campoEnlace, "Enlace");
+                int capacidad = LectorCampos.entero(campoCapacidad, "Capacidad virtual");
+                LocalDate fecha = LectorCampos.fecha(campoFecha, "Fecha");
+                LocalTime horario = LectorCampos.hora(campoHorario, "Horario");
+                funcionCreada = funcionServicio.programarFuncionStreaming(ComponentesUI.seleccionado(comboPelicula),
+                        enlace, capacidad, fecha, horario);
+                dispose();
+            } catch (CampoInvalidoException ex) {
+                labelError.setText(ex.getMessage());
+                ex.getCampo().requestFocus();
+            } catch (FestivalException ex) {
+                labelError.setText(ex.getMessage());
+            } catch (RuntimeException ex) {
+                labelError.setText(ComponentesUI.errorInesperado(ex));
+            }
+        });
+
+        add(panelCampos, BorderLayout.CENTER);
+        add(ComponentesUI.crearPanelSur(labelError, btnAceptar, btnCancelar), BorderLayout.SOUTH);
     }
 
-    @Override
-    protected String getTitulo() {
-        return "Agregar función streaming";
+    public boolean mostrar() {
+        setVisible(true);
+        return funcionCreada != null;
     }
 
-    @Override
-    protected int getAlto() {
-        return 330;
-    }
-
-    @Override
-    protected void agregarCamposPropios(FormularioDialogo formulario) {
-        campoEnlace = formulario.agregarCampo("Enlace:", new JTextField());
-        campoCapacidad = formulario.agregarCampo("Capacidad virtual (max 1000):", new JTextField());
-        formulario.encadenarEnter(campoEnlace, campoCapacidad);
-    }
-
-    // El rango de la capacidad lo valida FuncionStreaming; la fecha y la edición, el servicio
-    @Override
-    protected Funcion programar(Pelicula pelicula, LocalDateTime fechaHora) throws CampoInvalidoException {
-        String enlace = LectorCampos.texto(campoEnlace, "El enlace es obligatorio.");
-        int capacidad = LectorCampos.entero(campoCapacidad,
-                "La capacidad es obligatoria.", "La capacidad debe ser un número entero.");
-        return funcionServicio.programarFuncionStreaming(pelicula, enlace, capacidad, fechaHora);
+    public Funcion getFuncionCreada() {
+        return funcionCreada;
     }
 }

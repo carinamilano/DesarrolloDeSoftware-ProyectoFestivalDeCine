@@ -1,77 +1,43 @@
 package ui.entradas;
 
-import modelo.abonos.Abono;
-import modelo.abonos.TipoAbono;
-import modelo.personas.Espectador;
-import modelo.precios.TipoTarifa;
+import excepciones.FestivalException;
+import modelo.*;
 import servicios.AbonoServicio;
 import servicios.FuncionServicio;
 import servicios.PersonaServicio;
-import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
-import ui.comun.FormularioDialogo;
 
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
-// Compra de un abono (antes era un método de 50 líneas dentro de PanelAbonos)
-class DialogoComprarAbono {
-    private final VentanaPrincipal ventana;
-    private final AbonoServicio abonoServicio;
-    private final FuncionServicio funcionServicio;
-    private final PersonaServicio personaServicio;
+// CORRECCION S8: el diálogo de compra de abonos salió de PanelAbonos a su propia clase.
+public class DialogoComprarAbono extends JDialog {
+    private Abono abonoComprado;
 
-    DialogoComprarAbono(VentanaPrincipal ventana, AbonoServicio abonoServicio, FuncionServicio funcionServicio,
-                        PersonaServicio personaServicio) {
-        this.ventana = ventana;
-        this.abonoServicio = abonoServicio;
-        this.funcionServicio = funcionServicio;
-        this.personaServicio = personaServicio;
-    }
+    public DialogoComprarAbono(Window padre, AbonoServicio abonoServicio, FuncionServicio funcionServicio, PersonaServicio personaServicio) {
+        super(padre, "Comprar abono", ModalityType.APPLICATION_MODAL);
+        setSize(520, 420);
+        setLocationRelativeTo(padre);
+        setLayout(new BorderLayout(10, 10));
 
-    // Devuelve el abono comprado, o vacío si se canceló
-    Optional<Abono> mostrar() {
-        FormularioDialogo formulario = new FormularioDialogo(ventana, "Comprar abono", 520, 420);
-        formulario.setTextoAceptar("Comprar");
-        JComboBox<Espectador> comboEspectador = SelectorEspectador.crearCombo();
-        formulario.agregarCampo("Espectador:", SelectorEspectador.crear(ventana, personaServicio, comboEspectador));
-        JComboBox<TipoAbono> comboTipo = formulario.agregarCampo("Tipo de abono:", new JComboBox<>(TipoAbono.values()));
-        JComboBox<TipoTarifa> comboTarifa = formulario.agregarCampo("Tarifa:", new JComboBox<>(TipoTarifa.values()));
-        JLabel labelPrecio = formulario.agregarCampo("Precio:", new JLabel());
+        JComboBox<Espectador> comboEspectador = ComponentesUI.crearComboPersonas(personaServicio.getEspectadores());
+
+        // CORRECCION S4: el combo usa el enum TipoAbono en lugar de dos arreglos de textos.
+        JComboBox<TipoAbono> comboTipo = new JComboBox<>(TipoAbono.values());
+        JComboBox<TipoTarifa> comboTarifa = new JComboBox<>(TipoTarifa.values());
+        JLabel labelPrecio = new JLabel();
         labelPrecio.setFont(new Font("SansSerif", Font.BOLD, 13));
-        JList<LocalDate> listaDias = crearListaDias(formulario);
-
-        // El precio lo calcula el Tarifario, el mismo que calcula el de las entradas
-        Runnable actualizar = () -> {
-            TipoAbono tipo = ComponentesUI.seleccionado(comboTipo);
-            listaDias.setEnabled(tipo == TipoAbono.TRES_DIAS);
-            labelPrecio.setText(ComponentesUI.formatearPrecio(abonoServicio.cotizar(tipo, ComponentesUI.seleccionado(comboTarifa))));
-        };
-        comboTipo.addActionListener(e -> actualizar.run());
-        comboTarifa.addActionListener(e -> actualizar.run());
-        actualizar.run();
-
-        AtomicReference<Abono> comprado = new AtomicReference<>();
-        formulario.alAceptar(() -> {
-            Espectador espectador = ComponentesUI.seleccionado(comboEspectador);
-            TipoTarifa tarifa = ComponentesUI.seleccionado(comboTarifa);
-            comprado.set(switch (ComponentesUI.seleccionado(comboTipo)) {
-                case TRES_DIAS -> abonoServicio.comprarAbonoTresDias(espectador, tarifa, listaDias.getSelectedValuesList());
-                case FULL -> abonoServicio.comprarAbonoFull(espectador, tarifa);
-                case STREAMING -> abonoServicio.comprarAbonoStreaming(espectador, tarifa);
-            });
-            formulario.cerrar();
-        });
-        formulario.mostrar();
-        return Optional.ofNullable(comprado.get());
-    }
-
-    // Lista de días (con funciones presenciales) para el abono de 3 días
-    private JList<LocalDate> crearListaDias(FormularioDialogo formulario) {
+        JPanel panelCampos = ComponentesUI.crearPanelCampos(4);
+        panelCampos.add(new JLabel("Espectador:"));
+        panelCampos.add(ComponentesUI.crearSelectorEspectador(this, personaServicio, comboEspectador));
+        panelCampos.add(new JLabel("Tipo de abono:"));
+        panelCampos.add(comboTipo);
+        panelCampos.add(new JLabel("Tarifa:"));
+        panelCampos.add(comboTarifa);
+        panelCampos.add(new JLabel("Precio:"));
+        panelCampos.add(labelPrecio);
         List<LocalDate> fechas = funcionServicio.getFechasConFuncionesPresenciales();
         JList<LocalDate> listaDias = new JList<>(fechas.toArray(new LocalDate[0]));
         listaDias.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -81,7 +47,55 @@ class DialogoComprarAbono {
                 BorderFactory.createEmptyBorder(0, 20, 0, 20),
                 BorderFactory.createTitledBorder("Elegí 3 días (Ctrl + clic)")));
         panelDias.add(new JScrollPane(listaDias), BorderLayout.CENTER);
-        formulario.agregarDebajo(panelDias);
-        return listaDias;
+
+        JPanel panelCentro = new JPanel(new BorderLayout());
+        panelCentro.add(panelCampos, BorderLayout.NORTH);
+        panelCentro.add(panelDias, BorderLayout.CENTER);
+
+        Runnable actualizar = () -> {
+            TipoAbono tipo = ComponentesUI.seleccionado(comboTipo);
+            listaDias.setEnabled(tipo == TipoAbono.TRES_DIAS);
+            double precio = abonoServicio.calcularPrecioAbono(tipo, ComponentesUI.seleccionado(comboTarifa));
+            labelPrecio.setText(ComponentesUI.formatearPrecio(precio));
+        };
+        comboTipo.addActionListener(e -> actualizar.run());
+        comboTarifa.addActionListener(e -> actualizar.run());
+        actualizar.run();
+
+        JLabel labelError = ComponentesUI.crearLabelError();
+        JButton btnAceptar = new JButton("Comprar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        btnCancelar.addActionListener(e -> dispose());
+
+        // CORRECCION S4/S10: el switch es sobre el enum, no sobre la posición del combo & que sean exactamente 3 días distintos lo valida AbonoTresDias.
+        btnAceptar.addActionListener(e -> {
+            Espectador espectador = ComponentesUI.seleccionado(comboEspectador);
+            TipoTarifa tarifa = ComponentesUI.seleccionado(comboTarifa);
+            try {
+                switch (ComponentesUI.seleccionado(comboTipo)) {
+                    case TRES_DIAS -> abonoComprado = abonoServicio.comprarAbonoTresDias(espectador, tarifa, listaDias.getSelectedValuesList());
+                    case FULL -> abonoComprado = abonoServicio.comprarAbonoFull(espectador, tarifa);
+                    case STREAMING -> abonoComprado = abonoServicio.comprarAbonoStreaming(espectador, tarifa);
+                }
+                dispose();
+            } catch (FestivalException ex) {
+                labelError.setText(ex.getMessage());
+            } catch (RuntimeException ex) {
+                labelError.setText(ComponentesUI.errorInesperado(ex));
+            }
+        });
+
+        add(panelCentro, BorderLayout.CENTER);
+        add(ComponentesUI.crearPanelSur(labelError, btnAceptar, btnCancelar), BorderLayout.SOUTH);
+    }
+
+    public boolean mostrar() {
+        setVisible(true);
+        return abonoComprado != null;
+    }
+
+    public Abono getAbonoComprado() {
+        return abonoComprado;
     }
 }

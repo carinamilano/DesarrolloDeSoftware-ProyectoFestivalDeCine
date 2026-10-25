@@ -1,10 +1,7 @@
 package ui.festival;
 
 import excepciones.FestivalException;
-import modelo.festival.Edicion;
-import modelo.festival.Seccion;
-import modelo.festival.TipoSeccion;
-import modelo.peliculas.Pelicula;
+import modelo.*;
 import servicios.FestivalServicio;
 import ui.VentanaPrincipal;
 import ui.comun.ComponentesUI;
@@ -14,66 +11,89 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
+/* CORRECCION S8: el diálogo de alta de sección pasó a DialogoAgregarSeccion y el filtro de
+películas asociables a FestivalServicio, así este panel solo muestra y llama al servicio.*/
 public class PanelSecciones extends JPanel {
-    private static final int COLUMNA_TIPO = 0;
 
-    private final VentanaPrincipal ventana;
-    private final FestivalServicio festivalServicio;
-    private final JComboBox<Edicion> comboEdicion;
-    private final DefaultTableModel modeloSecciones;
-    private final JTable tablaSecciones;
-    private final DefaultTableModel modeloPeliculas;
-    private final JTable tablaPeliculas;
-    private final JButton botonAgregar;
-    private List<Pelicula> peliculasMostradas = List.of();
+    private VentanaPrincipal ventana;
+    private FestivalServicio festivalServicio;
+    private JComboBox<Edicion> comboEdicion;
+    private JTable tablaSecciones;
+    private DefaultTableModel modeloSecciones;
+    private JTable tablaPeliculas;
+    private DefaultTableModel modeloPeliculas;
+    private JButton btnAgregar;
 
     public PanelSecciones(VentanaPrincipal ventana, FestivalServicio festivalServicio) {
         this.ventana = ventana;
         this.festivalServicio = festivalServicio;
-        ComponentesUI.configurarPanel(this);
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        comboEdicion = new JComboBox<>(festivalServicio.getEdiciones().toArray(new Edicion[0]));
+        construirPanelSuperior();
+        construirPanelCentral();
+        construirPanelBotones();
+
+        cargarSecciones();
+        actualizarBotonAgregar();
+    }
+
+    private void construirPanelSuperior() {
+        // CORRECCION S10: el combo guarda las ediciones, no sus años.
+        comboEdicion = ComponentesUI.crearComboEdiciones(festivalServicio.getEdiciones());
         comboEdicion.addActionListener(e -> {
             cargarSecciones();
             actualizarBotonAgregar();
         });
+        JPanel panelEdicion = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelEdicion.add(new JLabel("Edición:"));
+        panelEdicion.add(comboEdicion);
+
+        add(ComponentesUI.crearEncabezado("Gestión de Secciones", panelEdicion), BorderLayout.NORTH);
+    }
+
+    private void construirPanelCentral() {
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        splitPane.setResizeWeight(0.5);
 
         modeloSecciones = ComponentesUI.crearModeloTabla("Sección", "Premio", "Descripción", "Películas", "Ganadora (jurado)");
         tablaSecciones = ComponentesUI.crearTabla(modeloSecciones);
         tablaSecciones.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) cargarPeliculas();
         });
+
+        JPanel panelSecciones = new JPanel(new BorderLayout());
+        panelSecciones.setBorder(BorderFactory.createTitledBorder("Secciones de la edición"));
+        panelSecciones.add(new JScrollPane(tablaSecciones), BorderLayout.CENTER);
+
         modeloPeliculas = ComponentesUI.crearModeloTabla("Título", "Género", "Director", "Promedio jurado");
         tablaPeliculas = ComponentesUI.crearTabla(modeloPeliculas);
-        botonAgregar = ComponentesUI.crearBoton("Agregar sección", this::agregarSeccion);
 
-        add(crearEncabezado(), BorderLayout.NORTH);
-        add(crearPanelCentral(), BorderLayout.CENTER);
-        add(ComponentesUI.crearPanelBotones(botonAgregar,
-                ComponentesUI.crearBoton("Asociar película", this::asociarPelicula),
-                ComponentesUI.crearBoton("Quitar película", this::quitarPelicula)), BorderLayout.SOUTH);
+        JPanel panelPeliculas = new JPanel(new BorderLayout());
+        panelPeliculas.setBorder(BorderFactory.createTitledBorder("Películas de la sección seleccionada"));
+        panelPeliculas.add(new JScrollPane(tablaPeliculas), BorderLayout.CENTER);
 
-        cargarSecciones();
-        actualizarBotonAgregar();
+        splitPane.setTopComponent(panelSecciones);
+        splitPane.setBottomComponent(panelPeliculas);
+        add(splitPane, BorderLayout.CENTER);
     }
 
-    private JPanel crearEncabezado() {
-        JPanel panelEdicion = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        panelEdicion.add(new JLabel("Edición:"));
-        panelEdicion.add(comboEdicion);
+    private void construirPanelBotones() {
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
 
-        JPanel encabezado = new JPanel(new BorderLayout(10, 0));
-        encabezado.add(ComponentesUI.crearTitulo("Gestión de Secciones"), BorderLayout.WEST);
-        encabezado.add(panelEdicion, BorderLayout.EAST);
-        return encabezado;
-    }
+        btnAgregar = new JButton("Agregar sección");
+        btnAgregar.addActionListener(e -> agregarSeccion());
 
-    private JSplitPane crearPanelCentral() {
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        splitPane.setResizeWeight(0.5);
-        splitPane.setTopComponent(ComponentesUI.crearPanelConBorde("Secciones de la edición", tablaSecciones));
-        splitPane.setBottomComponent(ComponentesUI.crearPanelConBorde("Películas de la sección seleccionada", tablaPeliculas));
-        return splitPane;
+        JButton btnAsociar = new JButton("Asociar película");
+        btnAsociar.addActionListener(e -> asociarPelicula());
+
+        JButton btnQuitar = new JButton("Quitar película");
+        btnQuitar.addActionListener(e -> quitarPelicula());
+
+        panelBotones.add(btnAgregar);
+        panelBotones.add(btnAsociar);
+        panelBotones.add(btnQuitar);
+        add(panelBotones, BorderLayout.SOUTH);
     }
 
     private Edicion getEdicionSeleccionada() {
@@ -84,8 +104,8 @@ public class PanelSecciones extends JPanel {
         Edicion edicion = getEdicionSeleccionada();
         int fila = tablaSecciones.getSelectedRow();
         if (edicion == null || fila < 0) return null;
-        TipoSeccion tipo = (TipoSeccion) modeloSecciones.getValueAt(fila, COLUMNA_TIPO);
-        return edicion.buscarSeccion(tipo).orElse(null);
+        TipoSeccion tipo = (TipoSeccion) modeloSecciones.getValueAt(fila, 0);
+        return edicion.buscarSeccion(tipo);
     }
 
     private void cargarSecciones() {
@@ -93,13 +113,14 @@ public class PanelSecciones extends JPanel {
         modeloPeliculas.setRowCount(0);
         Edicion edicion = getEdicionSeleccionada();
         if (edicion == null) return;
-        for (Seccion seccion : edicion.getSecciones()) {
+        for (Seccion s : edicion.getSecciones()) {
+            // CORRECCION I12: solo hay ganadora si alguna película de la sección fue evaluada.
             modeloSecciones.addRow(new Object[]{
-                    seccion.getTipo(),
-                    seccion.getPremio().getNombre(),
-                    seccion.getPremio().getDescripcion(),
-                    seccion.cantidadPeliculas(),
-                    seccion.determinarGanadora().map(Pelicula::getTitulo).orElse("-")
+                    s.getTipo(),
+                    s.getPremio().getNombre(),
+                    s.getPremio().getDescripcion(),
+                    s.getPeliculas().size(),
+                    s.tieneGanadora() ? s.determinarGanadora().getTitulo() : "-"
             });
         }
     }
@@ -107,117 +128,123 @@ public class PanelSecciones extends JPanel {
     private void cargarPeliculas() {
         modeloPeliculas.setRowCount(0);
         Seccion seccion = getSeccionSeleccionada();
-        peliculasMostradas = seccion == null ? List.of() : seccion.getPeliculas();
-        for (Pelicula pelicula : peliculasMostradas) {
+        if (seccion == null) return;
+        for (Pelicula p : seccion.getPeliculas()) {
             modeloPeliculas.addRow(new Object[]{
-                    pelicula.getTitulo(),
-                    pelicula.getGenero(),
-                    pelicula.getNombreDirector(),
-                    String.format("%.2f", pelicula.calcularPromedioJurado())
+                    p.getTitulo(),
+                    p.getGenero(),
+                    p.getDirector().getNombre(),
+                    String.format("%.2f", p.calcularPromedio())
             });
         }
     }
 
-    // El botón solo se habilita si la edición elegida todavía no tiene todos los tipos de sección
     private void actualizarBotonAgregar() {
         Edicion edicion = getEdicionSeleccionada();
-        boolean completa = edicion != null && edicion.tieneTodasLasSecciones();
-        botonAgregar.setEnabled(edicion != null && !completa);
+        boolean completa = edicion != null && edicion.getTiposSinSeccion().isEmpty();
+        btnAgregar.setEnabled(edicion != null && !completa);
         if (edicion == null) {
-            botonAgregar.setToolTipText("No hay ediciones registradas.");
+            btnAgregar.setToolTipText("No hay ediciones registradas.");
         } else if (completa) {
-            botonAgregar.setToolTipText("La edición " + edicion.getAnio() + " ya tiene todas las secciones.");
+            btnAgregar.setToolTipText("La edición " + edicion.getAnio() + " ya tiene todas las secciones.");
         } else {
-            botonAgregar.setToolTipText("Agregar una sección a la edición " + edicion.getAnio());
+            btnAgregar.setToolTipText("Agregar una sección a la edición " + edicion.getAnio());
         }
     }
 
     private void seleccionarSeccion(TipoSeccion tipo) {
         for (int i = 0; i < modeloSecciones.getRowCount(); i++) {
-            if (modeloSecciones.getValueAt(i, COLUMNA_TIPO) == tipo) {
+            if (modeloSecciones.getValueAt(i, 0) == tipo) {
                 tablaSecciones.setRowSelectionInterval(i, i);
                 return;
             }
         }
     }
 
-    private void refrescarSeleccionando(TipoSeccion tipo) {
-        cargarSecciones();
-        actualizarBotonAgregar();
-        seleccionarSeccion(tipo);
-    }
-
-    // ========== AGREGAR SECCIÓN ==========
-
     private void agregarSeccion() {
         Edicion edicion = getEdicionSeleccionada();
         if (edicion == null) {
-            ComponentesUI.avisar(ventana, "No hay ediciones registradas. Registre una desde Festival > Ediciones.");
+            ComponentesUI.mostrarAviso(ventana, "No hay ediciones registradas. Registre una desde Festival > Ediciones.");
             return;
         }
-        if (edicion.tieneTodasLasSecciones()) {
-            ComponentesUI.informar(ventana, "La edición " + edicion.getAnio() + " ya tiene todas las secciones.");
+        if (edicion.getTiposSinSeccion().isEmpty()) {
+            ComponentesUI.mostrarAviso(ventana, "La edición " + edicion.getAnio() + " ya tiene todas las secciones.");
             return;
         }
-        new DialogoAgregarSeccion(ventana, festivalServicio, edicion).mostrar().ifPresent(seccion -> {
-            refrescarSeleccionando(seccion.getTipo());
-            ventana.setEstado("Sección agregada: " + seccion.getTipo() + " (edición " + edicion.getAnio() + ")");
-        });
-    }
 
-    // ========== ASOCIAR PELÍCULA ==========
+        DialogoAgregarSeccion dialogo = new DialogoAgregarSeccion(ventana, festivalServicio, edicion);
+        if (dialogo.mostrar()) {
+            TipoSeccion tipo = dialogo.getTipoAgregado();
+            cargarSecciones();
+            actualizarBotonAgregar();
+            seleccionarSeccion(tipo);
+            ventana.setEstado("Sección agregada: " + tipo + " (edición " + edicion.getAnio() + ")");
+        }
+    }
 
     private void asociarPelicula() {
         Edicion edicion = getEdicionSeleccionada();
         Seccion seccion = getSeccionSeleccionada();
         if (seccion == null) {
-            ComponentesUI.avisar(ventana, "Seleccione una sección de la tabla.");
+            ComponentesUI.mostrarAviso(ventana, "Seleccione una sección de la tabla.");
             return;
         }
 
-        // Qué películas se pueden asociar lo decide el servicio
-        Pelicula[] asociables = festivalServicio.peliculasAsociables(edicion, seccion).toArray(new Pelicula[0]);
-        if (asociables.length == 0) {
-            ComponentesUI.informar(ventana, "No hay películas disponibles: cada película compite en una sola edición\n"
-                    + "y las que quedan ya están en esta sección o en otra edición.");
+        // CORRECCION S7: qué películas se pueden asociar lo decide FestivalServicio.
+        List<Pelicula> asociables = festivalServicio.peliculasAsociables(edicion, seccion);
+        if (asociables.isEmpty()) {
+            JOptionPane.showMessageDialog(ventana,
+                    "No hay películas disponibles: cada película compite en una sola edición\n"
+                            + "y las que quedan ya están en esta sección o en otra edición.",
+                    "Aviso", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
-        Pelicula pelicula = (Pelicula) JOptionPane.showInputDialog(ventana,
-                "Película a asociar a " + seccion.getTipo() + ":", "Asociar película",
-                JOptionPane.PLAIN_MESSAGE, null, asociables, asociables[0]);
-        if (pelicula == null) return;
+        JComboBox<Pelicula> comboPelicula = ComponentesUI.crearComboPeliculas(asociables);
+        int opcion = JOptionPane.showConfirmDialog(ventana, comboPelicula,
+                "Película a asociar a " + seccion.getTipo(), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (opcion != JOptionPane.OK_OPTION) return;
 
+        Pelicula pelicula = ComponentesUI.seleccionado(comboPelicula);
+        TipoSeccion tipo = seccion.getTipo();
         try {
-            festivalServicio.asociarPeliculaASeccion(edicion.getAnio(), seccion.getTipo(), pelicula);
-            refrescarSeleccionando(seccion.getTipo());
-            ventana.setEstado("Película " + pelicula.getTitulo() + " asociada a " + seccion.getTipo());
+            festivalServicio.asociarPeliculaASeccion(edicion, tipo, pelicula);
+            cargarSecciones();
+            seleccionarSeccion(tipo);
+            ventana.setEstado("Película " + pelicula.getTitulo() + " asociada a " + tipo);
         } catch (FestivalException ex) {
-            ComponentesUI.mostrarError(ventana, "Error", ex.getMessage());
+            ComponentesUI.mostrarError(ventana, ex.getMessage());
+        } catch (RuntimeException ex) {
+            ComponentesUI.mostrarError(ventana, ComponentesUI.errorInesperado(ex));
         }
     }
-
-    // ========== QUITAR PELÍCULA ==========
 
     private void quitarPelicula() {
         Edicion edicion = getEdicionSeleccionada();
         Seccion seccion = getSeccionSeleccionada();
         int fila = tablaPeliculas.getSelectedRow();
         if (seccion == null || fila < 0) {
-            ComponentesUI.avisar(ventana, "Seleccione una sección y una película de la sección.");
+            ComponentesUI.mostrarAviso(ventana, "Seleccione una sección y una película de la sección.");
             return;
         }
-        Pelicula pelicula = peliculasMostradas.get(fila);
-        if (!ComponentesUI.confirmar(ventana, "¿Quitar \"" + pelicula.getTitulo() + "\" de la sección " + seccion.getTipo() + "?", "Confirmar")) {
-            return;
-        }
+        Pelicula pelicula = seccion.getPeliculas().get(tablaPeliculas.convertRowIndexToModel(fila));
 
+        int confirmacion = JOptionPane.showConfirmDialog(ventana,
+                "¿Quitar \"" + pelicula.getTitulo() + "\" de la sección " + seccion.getTipo() + "?",
+                "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirmacion != JOptionPane.YES_OPTION) return;
+
+        TipoSeccion tipo = seccion.getTipo();
         try {
-            festivalServicio.quitarPeliculaDeSeccion(edicion.getAnio(), seccion.getTipo(), pelicula);
-            refrescarSeleccionando(seccion.getTipo());
-            ventana.setEstado("Película " + pelicula.getTitulo() + " quitada de " + seccion.getTipo());
+            // CORRECCION I7: si tiene funciones y es su única sección en la edición, el modelo lo rechaza.
+            festivalServicio.quitarPeliculaDeSeccion(edicion, tipo, pelicula);
+            cargarSecciones();
+            seleccionarSeccion(tipo);
+            ventana.setEstado("Película " + pelicula.getTitulo() + " quitada de " + tipo);
         } catch (FestivalException ex) {
-            ComponentesUI.mostrarError(ventana, "Error", ex.getMessage());
+            ComponentesUI.mostrarError(ventana, ex.getMessage());
+        } catch (RuntimeException ex) {
+            ComponentesUI.mostrarError(ventana, ComponentesUI.errorInesperado(ex));
         }
     }
 }

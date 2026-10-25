@@ -1,8 +1,6 @@
 package ui.entradas;
 
-import modelo.abonos.Abono;
-import modelo.funciones.Entrada;
-import modelo.funciones.Funcion;
+import modelo.Entrada;
 import servicios.FuncionServicio;
 import servicios.PersonaServicio;
 import servicios.VentaServicio;
@@ -12,47 +10,62 @@ import ui.comun.ComponentesUI;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.List;
 
+// CORRECCION S8: los diálogos de venta pasaron a DialogoVentaPresencial y DialogoVentaStreaming.
 public class PanelVentaEntradas extends JPanel {
-    private final VentanaPrincipal ventana;
-    private final VentaServicio ventaServicio;
-    private final FuncionServicio funcionServicio;
-    private final PersonaServicio personaServicio;
-    private final DefaultTableModel modeloTabla;
 
-    public PanelVentaEntradas(VentanaPrincipal ventana, VentaServicio ventaServicio, FuncionServicio funcionServicio,
-                              PersonaServicio personaServicio) {
+    private VentanaPrincipal ventana;
+    private VentaServicio ventaServicio;
+    private FuncionServicio funcionServicio;
+    private PersonaServicio personaServicio;
+    private DefaultTableModel modeloTabla;
+
+    public PanelVentaEntradas(VentanaPrincipal ventana, VentaServicio ventaServicio,
+                              FuncionServicio funcionServicio, PersonaServicio personaServicio) {
         this.ventana = ventana;
         this.ventaServicio = ventaServicio;
         this.funcionServicio = funcionServicio;
         this.personaServicio = personaServicio;
-        ComponentesUI.configurarPanel(this);
-
-        modeloTabla = ComponentesUI.crearModeloTabla("Código", "Película", "Tipo", "Fecha", "Espectador", "Detalle", "Precio");
-        add(ComponentesUI.crearTitulo("Venta de Entradas"), BorderLayout.NORTH);
-        add(new JScrollPane(ComponentesUI.crearTabla(modeloTabla)), BorderLayout.CENTER);
-        // Solo se ofrecen las funciones que todavía no comenzaron
-        add(ComponentesUI.crearPanelBotones(
-                ComponentesUI.crearBoton("Vender entrada presencial", () -> venderEntrada("Vender entrada presencial",
-                        "No hay funciones presenciales a la venta.", funcionServicio.getFuncionesPresencialesEnVenta())),
-                ComponentesUI.crearBoton("Vender entrada streaming", () -> venderEntrada("Vender entrada streaming",
-                        "No hay funciones streaming a la venta.", funcionServicio.getFuncionesStreamingEnVenta()))),
-                BorderLayout.SOUTH);
-
+        setLayout(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(ComponentesUI.crearEncabezado("Venta de Entradas", null), BorderLayout.NORTH);
+        construirTabla();
+        construirPanelBotones();
         cargarDatos();
+    }
+
+    private void construirTabla() {
+        modeloTabla = ComponentesUI.crearModeloTabla("Código", "Película", "Tipo", "Fecha", "Espectador", "Detalle", "Precio");
+        add(new JScrollPane(ComponentesUI.crearTabla(modeloTabla)), BorderLayout.CENTER);
+    }
+
+    private void construirPanelBotones() {
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+
+        JButton btnVenderPresencial = new JButton("Vender entrada presencial");
+        btnVenderPresencial.addActionListener(e -> venderEntradaPresencial());
+
+        JButton btnVenderStreaming = new JButton("Vender entrada streaming");
+        btnVenderStreaming.addActionListener(e -> venderEntradaStreaming());
+
+        panelBotones.add(btnVenderPresencial);
+        panelBotones.add(btnVenderStreaming);
+        add(panelBotones, BorderLayout.SOUTH);
     }
 
     private void cargarDatos() {
         modeloTabla.setRowCount(0);
         for (Entrada entrada : ventaServicio.getEntradas()) {
-            Funcion funcion = entrada.getFuncion();
-            String tipo = funcion.getModalidad() + entrada.getAbono().map(Abono::getCodigo).map(codigo -> " (abono " + codigo + ")").orElse("");
+            // CORRECCION S3: el tipo lo responde la función y el detalle la entrada, sin instanceof.
+            String tipo = entrada.getFuncion().getTipo();
+            if (entrada.esReservaDeAbono()) {
+                tipo += " (abono " + entrada.getAbono().getCodigo() + ")";
+            }
             modeloTabla.addRow(new Object[]{
                     entrada.getCodigo(),
-                    funcion.getTituloPelicula(),
+                    entrada.getFuncion().getPelicula().getTitulo(),
                     tipo,
-                    funcion.getFecha().toString(),
+                    entrada.getFuncion().getFecha().toString(),
                     entrada.getEspectador().getNombre(),
                     entrada.getDetalle(),
                     ComponentesUI.formatearPrecio(entrada.getPrecio())
@@ -60,12 +73,33 @@ public class PanelVentaEntradas extends JPanel {
         }
     }
 
-    private void venderEntrada(String titulo, String siNoHayFunciones, List<? extends Funcion> funciones) {
-        if (funciones.isEmpty()) {
-            ComponentesUI.avisar(ventana, siNoHayFunciones);
+    private void venderEntradaPresencial() {
+        if (funcionServicio.getFuncionesPresencialesEnVenta().isEmpty()) {
+            ComponentesUI.mostrarAviso(ventana, "No hay funciones presenciales disponibles.");
             return;
         }
-        if (!SelectorEspectador.asegurarEspectadores(ventana, personaServicio, titulo)) return;
-        new DialogoVentaEntrada(ventana, ventaServicio, personaServicio, titulo, funciones, this::cargarDatos).mostrar();
+        if (!ComponentesUI.asegurarEspectadores(ventana, personaServicio, "Vender entrada presencial")) return;
+
+        DialogoVentaPresencial dialogo = new DialogoVentaPresencial(ventana, ventaServicio, funcionServicio, personaServicio);
+        if (dialogo.mostrar()) {
+            cargarDatos();
+            Entrada entrada = dialogo.getUltimaEntrada();
+            ventana.setEstado("Entrada vendida: " + entrada.getCodigo() + " - Precio: " + ComponentesUI.formatearPrecio(entrada.getPrecio()));
+        }
+    }
+
+    private void venderEntradaStreaming() {
+        if (funcionServicio.getFuncionesStreamingEnVenta().isEmpty()) {
+            ComponentesUI.mostrarAviso(ventana, "No hay funciones streaming disponibles.");
+            return;
+        }
+        if (!ComponentesUI.asegurarEspectadores(ventana, personaServicio, "Vender entrada streaming")) return;
+
+        DialogoVentaStreaming dialogo = new DialogoVentaStreaming(ventana, ventaServicio, funcionServicio, personaServicio);
+        if (dialogo.mostrar()) {
+            cargarDatos();
+            Entrada entrada = dialogo.getEntradaVendida();
+            ventana.setEstado("Entrada streaming vendida: " + entrada.getCodigo() + " - Precio: " + ComponentesUI.formatearPrecio(entrada.getPrecio()));
+        }
     }
 }

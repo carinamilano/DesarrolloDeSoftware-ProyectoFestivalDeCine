@@ -1,0 +1,42 @@
+pedro@cine.com;The Irishman;8.5
+laura@cine.com;The Irishman;7.8
+roberto@cine.com;The Irishman;9.0
+fernando@cine.com;The Irishman;8.8
+pedro@cine.com;Roma;9.0
+laura@cine.com;Roma;8.5
+roberto@cine.com;Roma;8.8
+fernando@cine.com;Roma;9.2
+pedro@cine.com;Tar;7.5
+laura@cine.com;Tar;8.0
+claudia@cine.com;Tar;8.5
+pedro@cine.com;Oppenheimer;9.5
+roberto@cine.com;Oppenheimer;9.2
+fernando@cine.com;Oppenheimer;9.0
+fernando@cine.com;Volver;9.0
+pedro@cine.com;Parasite;9.8
+roberto@cine.com;Parasite;9.5
+fernando@cine.com;Parasite;10.0
+laura@cine.com;Barbie;7.0
+claudia@cine.com;Barbie;6.5
+fernando@cine.com;Barbie;7.5
+laura@cine.com;Dune;8.8
+claudia@cine.com;Dune;9.0
+roberto@cine.com;La La Land;8.5
+claudia@cine.com;La La Land;9.5
+pedro@cine.com;Dolor y gloria;8.7
+laura@cine.com;Dolor y gloria;9.1
+claudia@cine.com;Dolor y gloria;8.4
+roberto@cine.com;Moonrise Kingdom;8.0
+fernando@cine.com;Moonrise Kingdom;7.6
+pedro@cine.com;Whiplash;9.3
+claudia@cine.com;Whiplash;9.0
+laura@cine.com;Lady Bird;8.2
+fernando@cine.com;Lady Bird;8.6
+pedro@cine.com;Interstellar;9.4
+roberto@cine.com;Interstellar;9.1
+laura@cine.com;Interstellar;8.9
+claudia@cine.com;Gravity;8.3
+fernando@cine.com;Gravity;8.0
+roberto@cine.com;Arrival;8.8
+laura@cine.com;Arrival;9.2
+pedro@cine.com;Arrival;8.5
