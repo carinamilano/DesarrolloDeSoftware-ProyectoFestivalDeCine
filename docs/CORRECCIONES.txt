@@ -2,8 +2,9 @@
 CORRECCIONES - SEGUNDA ENTREGA
 ========================================================
 
-Aqui se podra encontrar la lista de correciones dentro del archivo. 
-Para encontrarlos, buscar "CORRECCIÓN" en el proyecto (en IntelliJ:Ctrl+Shift+F).
+Aquí se puede encontrar la lista de correcciones hechas en el proyecto.
+Para encontrarlas en el código, buscar "CORRECCION" (sin tilde) en el proyecto
+(en IntelliJ: Ctrl+Shift+F). Cada marca indica el código de la corrección (I1, P5, S3...).
 
 Las correcciones se hicieron sin patrones de diseño: solo herencia,
 clases abstractas, polimorfismo, enums, excepciones propias y
@@ -11,7 +12,7 @@ colecciones.
 
 I - Integridad (reglas del negocio)
 I1 - Se venden entradas de funciones que ya pasaron
-- Dónde: EntradaServicio.venderEntrada*
+- Dónde: EntradaServicio.venderEntrada* (antes de dividirlo, ver S1)
 - Solución: agregar Funcion.yaComenzo() (fecha + hora) y validarlo antes de vender.
 
 I2 - Reservar y cancelar comparan solo la fecha
@@ -159,12 +160,6 @@ S9 - Paneles muy acoplados
 S10 - Selección por posición en combos y tablas
 - Si la lista se ordena o se filtra, se elige el objeto equivocado.
 - Solución: combos que guarden los objetos directamente.
-
-S11 - LocalDate.now() repartido por todo el código
-- Solución: pasar un Clock por constructor para poder probar con una fecha fija.
-
-S12 - double para el dinero
-- Solución: BigDecimal.
 
 S13 - Cadenas de getters
 - Por ejemplo, entrada.getFuncion().getPelicula().getTitulo().
