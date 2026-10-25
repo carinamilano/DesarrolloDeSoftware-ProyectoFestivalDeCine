@@ -176,6 +176,20 @@ S15 - Comparación con ==
 S16 - Código muerto o confuso
 - Solución: limpiarlo junto con B1.
 
+S17 - Large Class: Persistencia
+- Cargaba y guardaba los 15 archivos ella sola: 429 líneas, 36 métodos y conocía a los 7 servicios.
+- Además, el mismo recorrido con try/catch estaba copiado en los 15 métodos de carga.
+- Solución: dividirla por dominio (Extract Class). Persistencia queda como coordinadora y cada clase
+  carga y guarda solo sus archivos, conociendo solo los servicios que usa:
+    PersistenciaPersonas      → directores, actores, jurados, espectadores
+    PersistenciaPeliculas     → películas, reparto
+    PersistenciaFestival      → salas, ediciones, secciones, secciones_peliculas
+    PersistenciaVentas        → funciones, abonos, entradas
+    PersistenciaEvaluaciones  → evaluaciones, votos
+  Todas heredan de la clase abstracta ArchivosDeDominio, que tiene lo común (leer un archivo y
+  el recorrido con try/catch en cargarCada). Persistencia recorre los dominios en orden y llama a
+  cargar() y agregarLineas() de cada uno (polimorfismo).
+
 B - Bugs puntuales
 
 B1 - La demo asigna entradas a la función equivocada
