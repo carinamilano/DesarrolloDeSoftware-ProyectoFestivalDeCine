@@ -27,12 +27,17 @@ public abstract class Funcion {
     public abstract boolean verificarDisponibilidad();
     public abstract double calcularOcupacion();
 
-    /* CORRECCION S3: cada tipo de función responde su precio, su tipo y su lugar,
-    así el servicio y los paneles no preguntan con instanceof.*/
+    /* CORRECCION S3/S4: cada tipo de función responde su precio, su tipo (enum TipoFuncion) y su lugar,
+    así el servicio, los abonos y los paneles no preguntan con instanceof.*/
     public abstract double getPrecioBase();
-    public abstract String getTipo();
+    public abstract TipoFuncion getTipo();
     public abstract String getLugar();
     public abstract boolean requiereButaca();
+
+    // CORRECCION S11: la función responde el título de su película, sin cadenas de getters en la UI.
+    public String getTituloPelicula() {
+        return pelicula.getTitulo();
+    }
 
     public LocalDateTime getInicio() {
         return LocalDateTime.of(fecha, horario);
@@ -74,7 +79,7 @@ public abstract class Funcion {
         return pelicula;
     }
 
-    // CORRECCION S15: el código identifica a la función.
+    // CORRECCION S13: el código identifica a la función.
     @Override
     public boolean equals(Object otro) {
         if (this == otro) return true;

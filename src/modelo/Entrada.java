@@ -42,9 +42,18 @@ public abstract class Entrada {
         return abono != null;
     }
 
-    // CORRECCION S13: la entrada responde si es para una película
+    // CORRECCION S11: la entrada responde si es para una película
     public boolean esPara(Pelicula pelicula) {
         return funcion.esDe(pelicula);
+    }
+
+    // CORRECCION S11: la UI le pide estos datos a la entrada, sin entrada.getFuncion().getPelicula().getTitulo().
+    public String getTituloPelicula() {
+        return funcion.getTituloPelicula();
+    }
+
+    public TipoFuncion getTipoFuncion() {
+        return funcion.getTipo();
     }
     // CORRECCION S3: cada tipo de entrada describe y libera su lugar, sin instanceof.
     public abstract String getDetalle();
@@ -70,7 +79,7 @@ public abstract class Entrada {
         return abono;
     }
 
-    // CORRECCION S15: el código identifica a la entrada.
+    // CORRECCION S13: el código identifica a la entrada.
     @Override
     public boolean equals(Object otro) {
         if (this == otro) return true;

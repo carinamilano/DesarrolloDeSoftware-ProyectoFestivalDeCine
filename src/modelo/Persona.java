@@ -29,7 +29,7 @@ public abstract class Persona {
         return nombre + " <" + email + ">";
     }
 
-    // CORRECCION S15: dos personas son la misma si son del mismo tipo y tienen el mismo email.
+    // CORRECCION S13: dos personas son la misma si son del mismo tipo y tienen el mismo email.
     @Override
     public boolean equals(Object otro) {
         if (this == otro) return true;

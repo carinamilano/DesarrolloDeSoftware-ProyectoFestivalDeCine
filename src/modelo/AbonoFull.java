@@ -8,9 +8,10 @@ public class AbonoFull extends Abono {
         super(codigo, espectador, tarifa, precio, fechaCompra);
     }
 
+    // CORRECCION S3: le pregunta el tipo a la función en lugar de usar instanceof.
     @Override
     public boolean cubre(Funcion funcion) {
-        return funcion instanceof FuncionPresencial;
+        return funcion.getTipo() == TipoFuncion.PRESENCIAL;
     }
 
     @Override

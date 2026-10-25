@@ -85,7 +85,7 @@ public class PanelFunciones extends JPanel {
             // CORRECCION S3: el tipo y el lugar los responde cada función, sin instanceof.
             modeloTabla.addRow(new Object[]{
                     f.getCodigo(),
-                    f.getPelicula().getTitulo(),
+                    f.getTituloPelicula(),
                     f.getTipo(),
                     f.getFecha().toString(),
                     f.getHorario().toString(),
@@ -112,7 +112,7 @@ public class PanelFunciones extends JPanel {
         int ocupacion = (int) funcion.calcularOcupacion();
 
         progressBar.setValue(ocupacion);
-        progressBar.setString(ocupacion + "% ocupado — " + funcion.getPelicula().getTitulo());
+        progressBar.setString(ocupacion + "% ocupado — " + funcion.getTituloPelicula());
 
         if (ocupacion >= 90) {
             progressBar.setForeground(new Color(200, 50, 50));
@@ -132,8 +132,9 @@ public class PanelFunciones extends JPanel {
         DialogoFuncionPresencial dialogo = new DialogoFuncionPresencial(ventana, funcionServicio, festivalServicio);
         if (dialogo.mostrar()) {
             cargarDatos();
+            // CORRECCION S11: el título lo responde la función, sin cadena de getters.
             ventana.setEstado("Función presencial agregada: " + dialogo.getFuncionCreada().getCodigo()
-                    + " - " + dialogo.getFuncionCreada().getPelicula().getTitulo());
+                    + " - " + dialogo.getFuncionCreada().getTituloPelicula());
         }
     }
 
@@ -143,7 +144,7 @@ public class PanelFunciones extends JPanel {
         if (dialogo.mostrar()) {
             cargarDatos();
             ventana.setEstado("Función streaming agregada: " + dialogo.getFuncionCreada().getCodigo()
-                    + " - " + dialogo.getFuncionCreada().getPelicula().getTitulo());
+                    + " - " + dialogo.getFuncionCreada().getTituloPelicula());
         }
     }
 

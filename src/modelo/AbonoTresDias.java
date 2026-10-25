@@ -38,9 +38,10 @@ public class AbonoTresDias extends Abono {
         return elegidos;
     }
 
+    // CORRECCION S3: le pregunta el tipo a la función en lugar de usar instanceof.
     @Override
     public boolean cubre(Funcion funcion) {
-        return funcion instanceof FuncionPresencial && dias.contains(funcion.getFecha());
+        return funcion.getTipo() == TipoFuncion.PRESENCIAL && dias.contains(funcion.getFecha());
     }
 
     public int getDiasRestantes() {

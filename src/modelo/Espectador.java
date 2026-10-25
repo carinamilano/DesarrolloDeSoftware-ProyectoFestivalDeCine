@@ -27,7 +27,7 @@ public class Espectador extends Persona {
 
     public boolean tieneEntradaPara(Pelicula pelicula) {
         for (Entrada e : entradas) {
-            // CORRECCION S13/S15: la entrada responde si es para la película.
+            // CORRECCION S11/S13: la entrada responde si es para la película.
             if (e.esPara(pelicula)) return true;
         }
         return false;

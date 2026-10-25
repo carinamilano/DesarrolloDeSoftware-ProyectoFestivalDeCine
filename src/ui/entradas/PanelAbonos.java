@@ -110,7 +110,7 @@ public class PanelAbonos extends JPanel {
             // CORRECCION S3: el lugar lo responde la función y el detalle la entrada, sin instanceof.
             modeloReservas.addRow(new Object[]{
                     e.getCodigo(),
-                    e.getFuncion().getPelicula().getTitulo(),
+                    e.getTituloPelicula(),
                     e.getFuncion().getFecha().toString(),
                     e.getFuncion().getHorario().toString(),
                     e.getFuncion().getLugar() + " - " + e.getDetalle()

@@ -16,7 +16,7 @@ public class InicializadorDatos {
     private EvaluacionServicio evaluacionServicio;
     private LocalDate fechaBase;
 
-    /* CORRECCION B1/S14: las funciones que se programan se guardan acá y se usan directamente.
+    /* CORRECCION B1/S12: las funciones que se programan se guardan acá y se usan directamente.
     Antes se volvían a buscar por título y fecha, y irishman20/parasite20 terminaban siendo la
     primera función del día (las 4 entradas de "Parasite 20:00" quedaban en la de las 16:00).*/
     private FuncionPresencial irishman15, irishman20, roma16, roma21, tar17, tar21, oppenheimer14, oppenheimer19, parasite16, parasite20, volver18, grandBudapest17;

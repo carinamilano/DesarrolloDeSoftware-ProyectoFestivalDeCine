@@ -5,9 +5,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 
-// CORRECCIÓN S8: lectura y validación de formato de los campos de texto en un solo lugar.
+// CORRECCION S8: lectura y validación de formato de los campos de texto en un solo lugar.
 // Antes las mismas validaciones de fecha, horario y números estaban copiadas en cada diálogo.
-// CORRECCIÓN S7: acá solo se controla el formato; las reglas del negocio las valida el modelo.
+// CORRECCION S7: acá solo se controla el formato; las reglas del negocio las valida el modelo.
 public final class LectorCampos {
 
     private LectorCampos() {

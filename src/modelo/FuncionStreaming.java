@@ -55,8 +55,8 @@ public class FuncionStreaming extends Funcion {
     }
 
     @Override
-    public String getTipo() {
-        return "Streaming";
+    public TipoFuncion getTipo() {
+        return TipoFuncion.STREAMING;
     }
 
     @Override
@@ -81,6 +81,6 @@ public class FuncionStreaming extends Funcion {
 
     @Override
     public String toString() {
-        return "Streaming - " + super.toString() + " - Enlace: " + enlace;
+        return getTipo() + " - " + super.toString() + " - Enlace: " + enlace;
     }
 }

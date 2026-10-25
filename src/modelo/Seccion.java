@@ -40,7 +40,7 @@ public class Seccion {
     // CORRECCION I12: solo hay ganadora si alguna película fue evaluada.
     public boolean tieneGanadora() {
         for (Pelicula p : peliculas) {
-            if (p.tieneEvaluaciones()) return true;
+            if (p.getCalificaciones().tieneEvaluaciones()) return true;
         }
         return false;
     }
@@ -50,7 +50,7 @@ public class Seccion {
     public Pelicula determinarGanadora() {
         Pelicula ganadora = null;
         for (Pelicula p : peliculas) {
-            if (!p.tieneEvaluaciones()) continue;
+            if (!p.getCalificaciones().tieneEvaluaciones()) continue;
             if (ganadora == null || esMejor(p, ganadora)) {
                 ganadora = p;
             }
@@ -62,10 +62,12 @@ public class Seccion {
     }
 
     private boolean esMejor(Pelicula candidata, Pelicula actual) {
-        if (candidata.calcularPromedio() != actual.calcularPromedio()) {
-            return candidata.calcularPromedio() > actual.calcularPromedio();
+        Calificaciones c = candidata.getCalificaciones();
+        Calificaciones a = actual.getCalificaciones();
+        if (c.calcularPromedio() != a.calcularPromedio()) {
+            return c.calcularPromedio() > a.calcularPromedio();
         }
-        return candidata.getEvaluaciones().size() > actual.getEvaluaciones().size();
+        return c.cantidadEvaluaciones() > a.cantidadEvaluaciones();
     }
 
     public TipoSeccion getTipo() {

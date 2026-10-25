@@ -1,6 +1,6 @@
 package modelo;
 
-/* CORRECCIÓN S4: reemplaza los textos "TRES_DIAS", "FULL" y "STREAMING" que estaban repetidos
+/* CORRECCION S4: reemplaza los textos "TRES_DIAS", "FULL" y "STREAMING" que estaban repetidos
  en EntradaServicio y PanelAbonos. Cada tipo trae su etiqueta y su precio base.*/
 public enum TipoAbono {
     TRES_DIAS("Abono 3 días", 20000),

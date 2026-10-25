@@ -134,7 +134,7 @@ public class PanelSecciones extends JPanel {
                     p.getTitulo(),
                     p.getGenero(),
                     p.getDirector().getNombre(),
-                    String.format("%.2f", p.calcularPromedio())
+                    String.format("%.2f", p.getCalificaciones().calcularPromedio())
             });
         }
     }

@@ -2,7 +2,7 @@ package ui.comun;
 
 import javax.swing.*;
 
-/* CORRECCIÓN S6/S8: error de formato en un campo de un formulario (vacío, no es número, no es fecha...).
+/* CORRECCION S6/S8: error de formato en un campo de un formulario (vacío, no es número, no es fecha...).
 Trae el campo para poder darle el foco al mostrar el mensaje.*/
 public class CampoInvalidoException extends Exception {
     private final JComponent campo;

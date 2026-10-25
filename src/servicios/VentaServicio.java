@@ -42,7 +42,7 @@ public class VentaServicio {
     }
 
     // CORRECCION I10: recibe el Espectador elegido; antes recibía el nombre y lo volvía a buscar.
-    // CORRECCION S16: se quitaron las sobrecargas sin tarifa, que solo usaba InicializadorDatos.
+    // CORRECCION S14: se quitaron las sobrecargas sin tarifa, que solo usaba InicializadorDatos.
     public EntradaPresencial venderEntradaPresencial(Espectador espectador, FuncionPresencial funcion,
                                                      int numeroButaca, TipoTarifa tarifa) {
         double precio = calcularPrecioEntrada(funcion, tarifa);

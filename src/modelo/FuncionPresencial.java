@@ -65,8 +65,8 @@ public class FuncionPresencial extends Funcion {
     }
 
     @Override
-    public String getTipo() {
-        return "Presencial";
+    public TipoFuncion getTipo() {
+        return TipoFuncion.PRESENCIAL;
     }
 
     @Override
@@ -92,6 +92,6 @@ public class FuncionPresencial extends Funcion {
 
     @Override
     public String toString() {
-        return "Presencial - " + super.toString() + " - Sala: " + sala.getNombre();
+        return getTipo() + " - " + super.toString() + " - Sala: " + sala.getNombre();
     }
 }

@@ -205,7 +205,7 @@ public class PanelEvaluaciones extends JPanel {
                         Pelicula ganadora = seccion.determinarGanadora();
                         sb.append("    🏆 ").append(ganadora.getTitulo())
                                 .append(" (promedio: ")
-                                .append(String.format("%.2f", ganadora.calcularPromedio()))
+                                .append(String.format("%.2f", ganadora.getCalificaciones().calcularPromedio()))
                                 .append(")\n");
                     } else {
                         sb.append("    Sin películas evaluadas.\n");

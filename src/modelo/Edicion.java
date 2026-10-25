@@ -44,7 +44,7 @@ public class Edicion {
 
     public void agregarSeccion(Seccion s) {
         Validar.presente(s, "La sección es obligatoria.");
-        // CORRECCIÓN I8: la edición controla sus secciones repetidas (antes lo hacía FestivalServicio).
+        // CORRECCION I8: la edición controla sus secciones repetidas (antes lo hacía FestivalServicio).
         if (tieneSeccion(s.getTipo())) {
             throw new EntidadDuplicadaException("La edición " + anio + " ya tiene la sección " + s.getTipo() + ".");
         }
@@ -127,7 +127,7 @@ public class Edicion {
     // CORRECCION I12: solo hay ganadora del público si alguna película recibió votos.
     public boolean tieneGanadoraPublico() {
         for (Pelicula p : getPeliculas()) {
-            if (p.tieneVotos()) return true;
+            if (p.getCalificaciones().tieneVotos()) return true;
         }
         return false;
     }
@@ -136,7 +136,7 @@ public class Edicion {
     public Pelicula determinarGanadoraPublico() {
         Pelicula ganadora = null;
         for (Pelicula p : getPeliculas()) {
-            if (!p.tieneVotos()) continue;
+            if (!p.getCalificaciones().tieneVotos()) continue;
             if (ganadora == null || esMejorSegunPublico(p, ganadora)) {
                 ganadora = p;
             }
@@ -148,10 +148,12 @@ public class Edicion {
     }
 
     private boolean esMejorSegunPublico(Pelicula candidata, Pelicula actual) {
-        if (candidata.calcularPromedioPublico() != actual.calcularPromedioPublico()) {
-            return candidata.calcularPromedioPublico() > actual.calcularPromedioPublico();
+        Calificaciones c = candidata.getCalificaciones();
+        Calificaciones a = actual.getCalificaciones();
+        if (c.calcularPromedioPublico() != a.calcularPromedioPublico()) {
+            return c.calcularPromedioPublico() > a.calcularPromedioPublico();
         }
-        return candidata.getVotosPublico().size() > actual.getVotosPublico().size();
+        return c.cantidadVotos() > a.cantidadVotos();
     }
 
     public int getAnio() {
@@ -171,7 +173,7 @@ public class Edicion {
         return Collections.unmodifiableList(secciones);
     }
 
-    // CORRECCION S15: el año identifica a la edición.
+    // CORRECCION S13: el año identifica a la edición.
     @Override
     public boolean equals(Object otro) {
         if (this == otro) return true;

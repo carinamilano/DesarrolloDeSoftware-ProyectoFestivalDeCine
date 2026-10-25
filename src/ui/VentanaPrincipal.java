@@ -67,7 +67,7 @@ public class VentanaPrincipal extends JFrame {
         });
     }
 
-    /* CORRECCIÓN S9: cada panel recibe solo los servicios que usa, antes recibía la ventana entera
+    /* CORRECCION S9: cada panel recibe solo los servicios que usa, antes recibía la ventana entera
     y le pedía los servicios con getters.*/
     private void construirBarraMenu() {
         JMenuBar menuBar = new JMenuBar();

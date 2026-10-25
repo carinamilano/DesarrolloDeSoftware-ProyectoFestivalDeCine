@@ -22,7 +22,7 @@ public class Sala {
         return cantidadButacas;
     }
 
-    // CORRECCION S15: el nombre identifica a la sala.
+    // CORRECCION S13: el nombre identifica a la sala.
     @Override
     public boolean equals(Object otro) {
         if (this == otro) return true;

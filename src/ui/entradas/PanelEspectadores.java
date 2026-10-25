@@ -10,7 +10,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 
-/* CORRECCIÓN S9: los métodos static que usaban otros paneles (asegurarEspectadores, crearSelectorEspectador
+/* CORRECCION S9: los métodos static que usaban otros paneles (asegurarEspectadores, crearSelectorEspectador
 y el alta) pasaron a ComponentesUI; el formulario de alta es el DialogoPersona común (S8).*/
 public class PanelEspectadores extends JPanel {
 

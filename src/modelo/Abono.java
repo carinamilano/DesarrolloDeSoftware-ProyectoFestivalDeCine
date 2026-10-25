@@ -43,7 +43,7 @@ public abstract class Abono {
     public List<LocalDate> getDiasElegidos() {
         return Collections.emptyList();
     }
-    // CORRECCIÓN I14: solo los llama Entrada.vincular/desvincular.
+    // CORRECCION I14: solo los llama Entrada.vincular/desvincular.
     void agregarReserva(Entrada e) {
         if (!reservas.contains(e)) reservas.add(e);
     }
@@ -81,7 +81,7 @@ public abstract class Abono {
         return Collections.unmodifiableList(reservas);
     }
 
-    // CORRECCION S15: el código identifica al abono.
+    // CORRECCION S13: el código identifica al abono.
     @Override
     public boolean equals(Object otro) {
         if (this == otro) return true;

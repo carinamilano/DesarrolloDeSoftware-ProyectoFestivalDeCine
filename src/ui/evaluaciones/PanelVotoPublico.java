@@ -78,7 +78,7 @@ public class PanelVotoPublico extends JPanel {
     private void cargarVotos() {
         modeloVotos.setRowCount(0);
         for (Pelicula p : peliculaServicio.getPeliculas()) {
-            int cantidad = p.getVotosPublico().size();
+            int cantidad = p.getCalificaciones().cantidadVotos();
             // CORRECCION S5: se pregunta si compite antes de buscar la edición (antes se comparaba con null).
             String edicion = festivalServicio.compiteEnAlgunaEdicion(p)
                     ? ComponentesUI.describir(festivalServicio.buscarEdicionDe(p)) : "-";
@@ -86,7 +86,7 @@ public class PanelVotoPublico extends JPanel {
                     p.getTitulo(),
                     edicion,
                     cantidad,
-                    cantidad == 0 ? "-" : String.format("%.2f", p.calcularPromedioPublico())
+                    cantidad == 0 ? "-" : String.format("%.2f", p.getCalificaciones().calcularPromedioPublico())
             });
         }
     }
@@ -204,8 +204,8 @@ public class PanelVotoPublico extends JPanel {
                 Pelicula ganadora = edicion.determinarGanadoraPublico();
                 sb.append("  🏆 ").append(ganadora.getTitulo())
                         .append(" (promedio: ")
-                        .append(String.format("%.2f", ganadora.calcularPromedioPublico()))
-                        .append(" — ").append(ganadora.getVotosPublico().size()).append(" votos)\n");
+                        .append(String.format("%.2f", ganadora.getCalificaciones().calcularPromedioPublico()))
+                        .append(" — ").append(ganadora.getCalificaciones().cantidadVotos()).append(" votos)\n");
             } else {
                 sb.append("  Sin votos del público.\n");
             }

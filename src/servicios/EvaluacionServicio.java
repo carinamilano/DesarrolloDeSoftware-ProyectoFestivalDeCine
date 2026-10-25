@@ -28,7 +28,7 @@ public class EvaluacionServicio {
         List<Pelicula> paraVotar = new ArrayList<>();
         for (Entrada entrada : espectador.getEntradas()) {
             Pelicula p = entrada.getFuncion().getPelicula();
-            if (edicion.incluye(p) && !paraVotar.contains(p) && !p.fueVotadaPor(espectador)) {
+            if (edicion.incluye(p) && !paraVotar.contains(p) && !p.getCalificaciones().fueVotadaPor(espectador)) {
                 paraVotar.add(p);
             }
         }
@@ -38,7 +38,7 @@ public class EvaluacionServicio {
     public List<Evaluacion> getEvaluaciones() {
         List<Evaluacion> evaluaciones = new ArrayList<>();
         for (Pelicula p : peliculaServicio.getPeliculas()) {
-            evaluaciones.addAll(p.getEvaluaciones());
+            evaluaciones.addAll(p.getCalificaciones().getEvaluaciones());
         }
         return evaluaciones;
     }
@@ -46,7 +46,7 @@ public class EvaluacionServicio {
     public List<VotoPublico> getVotosPublico() {
         List<VotoPublico> votos = new ArrayList<>();
         for (Pelicula p : peliculaServicio.getPeliculas()) {
-            votos.addAll(p.getVotosPublico());
+            votos.addAll(p.getCalificaciones().getVotosPublico());
         }
         return votos;
     }

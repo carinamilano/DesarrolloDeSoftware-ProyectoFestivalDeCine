@@ -3,7 +3,7 @@ package ui.comun;
 import javax.swing.*;
 import java.awt.*;
 
-/* CORRECCIÓN S8: un solo formulario de persona (nombre, email y nacionalidad).
+/* CORRECCION S8: un solo formulario de persona (nombre, email y nacionalidad).
 Antes había cuatro casi iguales: en PanelDirectores, PanelActores, PanelEspectadores y PanelEvaluaciones.
 Quien lo usa lo muestra, intenta registrar a la persona y, si el servicio rechaza los datos
 (por ejemplo, email repetido), muestra el error y lo vuelve a abrir con lo que se había escrito.*/

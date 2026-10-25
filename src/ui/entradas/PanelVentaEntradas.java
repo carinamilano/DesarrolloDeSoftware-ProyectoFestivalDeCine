@@ -56,14 +56,14 @@ public class PanelVentaEntradas extends JPanel {
     private void cargarDatos() {
         modeloTabla.setRowCount(0);
         for (Entrada entrada : ventaServicio.getEntradas()) {
-            // CORRECCION S3: el tipo lo responde la función y el detalle la entrada, sin instanceof.
-            String tipo = entrada.getFuncion().getTipo();
+            // CORRECCION S3/S11: el tipo y el detalle los responde la entrada, sin instanceof ni cadenas de getters.
+            String tipo = entrada.getTipoFuncion().toString();
             if (entrada.esReservaDeAbono()) {
                 tipo += " (abono " + entrada.getAbono().getCodigo() + ")";
             }
             modeloTabla.addRow(new Object[]{
                     entrada.getCodigo(),
-                    entrada.getFuncion().getPelicula().getTitulo(),
+                    entrada.getTituloPelicula(),
                     tipo,
                     entrada.getFuncion().getFecha().toString(),
                     entrada.getEspectador().getNombre(),

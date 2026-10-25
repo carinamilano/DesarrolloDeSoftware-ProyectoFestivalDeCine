@@ -5,7 +5,7 @@ import excepciones.DatoInvalidoException;
 import java.util.ArrayList;
 import java.util.List;
 
-/* CORRECCIÓN P7: los campos se separan con ';' y, si un texto contiene ';' o comillas, se escribe
+/* CORRECCION P7: los campos se separan con ';' y, si un texto contiene ';' o comillas, se escribe
 entre comillas (las comillas internas se duplican). Antes se usaba split(",") sin escape
 y una coma dentro de un título corría todas las columnas.*/
 final class FormatoLinea {

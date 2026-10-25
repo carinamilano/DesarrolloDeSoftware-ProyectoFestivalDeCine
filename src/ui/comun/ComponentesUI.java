@@ -100,7 +100,7 @@ public final class ComponentesUI {
     }
 
     public static String describir(Funcion f) {
-        return f.getPelicula().getTitulo() + " — " + f.getFecha() + " " + f.getHorario() + " — " + f.getLugar();
+        return f.getTituloPelicula() + " — " + f.getFecha() + " " + f.getHorario() + " — " + f.getLugar();
     }
 
     public static String describir(Edicion e) {

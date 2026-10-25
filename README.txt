@@ -45,7 +45,7 @@ CLASES DEL MODELO
   - TipoSeccion (enum): COMPETENCIA_OFICIAL, CINE_INDEPENDIENTE,
     CORTOMETRAJE, NUEVOS_TALENTOS
   - Persona (abstract) → Director, Actor, Jurado, Espectador
-  - Pelicula, Evaluacion
+  - Pelicula, Calificaciones (evaluaciones y votos de cada película), Evaluacion
   - Genero (enum): DRAMA, COMEDIA, THRILLER, CIENCIA_FICCION, ...
   - Funcion (abstract) → FuncionPresencial, FuncionStreaming
   - Entrada (abstract) → EntradaPresencial, EntradaStreaming
@@ -53,6 +53,7 @@ CLASES DEL MODELO
   - Abono (abstract) → AbonoTresDias, AbonoFull, AbonoStreaming
   - TipoAbono (enum): TRES_DIAS, FULL, STREAMING (con su precio base)
   - TipoTarifa (enum): GENERAL, ESTUDIANTE, JUBILADO
+  - TipoFuncion (enum): PRESENCIAL, STREAMING
   - VotoPublico
 
 Las reglas del negocio están en el modelo: cada constructor valida sus
@@ -155,6 +156,16 @@ Persistencia:
   Cada archivo se escribe primero en un .tmp y después reemplaza al
   anterior: si algo falla a mitad de camino, el archivo anterior queda
   intacto.
+
+  La persistencia está dividida por dominio. Persistencia coordina y
+  cada clase carga y guarda sus propios archivos (todas heredan de la
+  clase abstracta ArchivosDeDominio):
+    PersistenciaPersonas      → directores, actores, jurados, espectadores
+    PersistenciaPeliculas     → películas, reparto
+    PersistenciaFestival      → salas, ediciones, secciones, secciones_peliculas
+    PersistenciaVentas        → funciones, abonos, entradas
+    PersistenciaEvaluaciones  → evaluaciones, votos
+  Se cargan en ese orden porque cada dominio usa datos de los anteriores.
 
 Butacas:
   Las butacas no se modelan como objetos independientes sino como

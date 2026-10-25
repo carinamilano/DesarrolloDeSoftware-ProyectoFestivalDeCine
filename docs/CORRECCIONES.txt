@@ -100,7 +100,7 @@ P7 - La coma se usa como separador sin escape
 
 P8 - La escritura no es segura
 - Si falla a mitad de camino, el archivo queda cortado.
- Solución: escribir en un .tmp y después reemplazar el original.
+- Solución: escribir en un .tmp y después reemplazar el original.
 
 P9 - El hilo de guardado no está sincronizado
 - Puede chocar con cambios hechos desde la UI.
@@ -113,7 +113,9 @@ P11 - La ruta depende de desde dónde se ejecuta la app
 - Solución: una carpeta datos/ fija y UTF-8 explícito.
 
 P12 - Hay 14 métodos de lectura y escritura casi iguales
-- Solución: dos métodos privados reutilizables.
+- Solución: leer y escribir archivos queda solo en ArchivoTexto; separar y unir los campos de una línea,
+  en FormatoLinea y Registro; y el recorrido de las líneas con su manejo de errores, en
+  ArchivosDeDominio.cargarCada (ver S15).
 
 P13 - Los datos actuales ya tienen errores
 - La evaluación duplicada y Gravity (91 min) en Cortometraje.
@@ -121,7 +123,7 @@ P13 - Los datos actuales ya tienen errores
 
 
 S - Code smells
-S1 God Class: EntradaServicio
+S1 - God Class: EntradaServicio
 - Maneja funciones, espectadores, entradas, abonos y precios.
 - Solución: dividirlo en FuncionServicio, VentaServicio y AbonoServicio.
 
@@ -131,15 +133,19 @@ S2 - Baja cohesión: PeliculaServicio
 
 S3 - instanceof en lugar de polimorfismo
 - En los precios, al cancelar una reserva, en los abonos y en tres paneles.
-- Solución: métodos abstractos como getPrecioBase(), getDetalle() y liberarLugar().
+- Solución: métodos abstractos que cada subclase responde: getPrecioBase(), getTipo(), getLugar()
+  y requiereButaca() en Funcion; getDetalle() y liberarLugar() en Entrada. Cada abono decide si
+  cubre una función preguntándole su tipo (funcion.getTipo()), sin instanceof.
 
 S4 - Strings mágicos
-- "TRES_DIAS", "FULL" y "STREAMING" repetidos; el género es texto libre.
-- Solución: enum TipoAbono y enum Genero.
+- "TRES_DIAS", "FULL" y "STREAMING" repetidos; el género es texto libre; el tipo de función era
+  el texto "Presencial"/"Streaming" en las funciones y "PRESENCIAL"/"STREAMING" en los archivos.
+- Solución: enum TipoAbono, enum Genero y enum TipoFuncion.
 
 S5 - null como respuesta
 - En las búsquedas, en los ganadores y en Entrada.abono.
-- Solución: lanzar EntidadNoEncontradaException o devolver Optional.
+- Solución: las búsquedas lanzan EntidadNoEncontradaException; antes de pedir un ganador se
+  pregunta tieneGanadora(); y en lugar de comparar el abono con null se usa esReservaDeAbono().
 
 S6 - Excepciones genéricas
 - Todo es FestivalException, y la UI atrapa Exception, así que un error real se muestra como “Error: null”.
@@ -154,27 +160,51 @@ S8 - Paneles largos y código copiado
 - Solución: una clase LectorCampos y un DialogoPersona reutilizable.
 
 S9 - Paneles muy acoplados
-- Cada panel recibe la ventana entera.
-- Solución: pasarle solo los servicios que usa.
+- Cada panel recibía la ventana entera y le pedía a ella los servicios.
+- Solución: cada panel recibe por constructor solo los servicios que usa. De la ventana solo usa
+  la barra de estado y la toma como ventana padre de sus diálogos.
 
 S10 - Selección por posición en combos y tablas
 - Si la lista se ordena o se filtra, se elige el objeto equivocado.
 - Solución: combos que guarden los objetos directamente.
 
-S13 - Cadenas de getters
+S11 - Cadenas de getters
 - Por ejemplo, entrada.getFuncion().getPelicula().getTitulo().
-- Solución: métodos como entrada.esPara(pelicula).
+- Solución: que responda el objeto que se tiene a mano: entrada.esPara(pelicula),
+  entrada.getTituloPelicula(), entrada.getTipoFuncion() y funcion.getTituloPelicula().
 
-S14 - Duplicación en la demo
+S12 - Duplicación en la demo
 - Las mismas 17 búsquedas aparecen dos veces.
 - Solución: buscar una sola vez.
 
-S15 - Comparación con ==
+S13 - Comparación con ==
 - Se rompe al cargar desde archivos.
 - Solución: equals por clave (email, título, código).
 
-S16 - Código muerto o confuso
+S14 - Código muerto o confuso
 - Solución: limpiarlo junto con B1.
+
+S15 - Large Class: Persistencia
+- Cargaba y guardaba los 15 archivos ella sola: 429 líneas, 36 métodos y conocía a los 7 servicios.
+- Además, el mismo recorrido con try/catch estaba copiado en los 15 métodos de carga.
+- Solución: dividirla por dominio (Extract Class). Persistencia queda como coordinadora y cada clase
+  carga y guarda solo sus archivos, conociendo solo los servicios que usa:
+    PersistenciaPersonas      → directores, actores, jurados, espectadores
+    PersistenciaPeliculas     → películas, reparto
+    PersistenciaFestival      → salas, ediciones, secciones, secciones_peliculas
+    PersistenciaVentas        → funciones, abonos, entradas
+    PersistenciaEvaluaciones  → evaluaciones, votos
+  Todas heredan de la clase abstracta ArchivosDeDominio, que tiene lo común (leer un archivo y
+  el recorrido con try/catch en cargarCada). Persistencia recorre los dominios en orden y llama a
+  cargar() y agregarLineas() de cada uno (polimorfismo).
+
+S16 - Baja cohesión (Large Class): Pelicula
+- Además de sus datos, guardaba las evaluaciones y los votos y calculaba los promedios:
+  25 métodos que mezclaban dos responsabilidades.
+- Solución: extraer la clase Calificaciones (Extract Class). Cada película tiene sus calificaciones,
+  que guardan evaluaciones y votos y responden si un jurado ya evaluó, si un espectador ya votó,
+  los promedios y las cantidades. En Pelicula quedan las reglas que necesitan conocer a la película:
+  un jurado evalúa una sola vez y para votar hay que tener entrada.
 
 B - Bugs puntuales
 
