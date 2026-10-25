@@ -2,49 +2,68 @@ package app;
 
 import excepciones.FestivalException;
 import excepciones.PersistenciaException;
-import inicializacion.InicializadorDatos;
+import modelo.Festival;
 import persistencia.Persistencia;
-import persistencia.PersistenciaArchivos;
-import repositorio.Catalogo;
-import servicios.SistemaFestival;
+import servicios.*;
 import ui.VentanaPrincipal;
 
 import javax.swing.*;
-import java.time.Clock;
 import java.util.List;
 
-// Punto de entrada: arma las piezas y las conecta. Es el único lugar que conoce las clases concretas
-// y el único que decide qué reloj se usa (el del sistema)
 public class Main {
-    private static final int ERRORES_A_MOSTRAR = 15;
+    private static final int MAXIMO_ERRORES_A_MOSTRAR = 15;
 
     public static void main(String[] args) {
-        Clock reloj = Clock.systemDefaultZone();
-        Catalogo catalogo = new Catalogo("Festival Internacional de Cine");
-        Persistencia persistencia = new PersistenciaArchivos(catalogo, reloj);
+
+        Festival festival = new Festival("Festival Internacional de Cine");
+
+        // CORRECCION S1/S2: los servicios quedaron divididos por tema para aligerar las responsbilidades.
+
+        PersonaServicio personaServicio = new PersonaServicio();
+        PeliculaServicio peliculaServicio = new PeliculaServicio(festival);
+        FestivalServicio festivalServicio = new FestivalServicio(festival, peliculaServicio);
+        FuncionServicio funcionServicio = new FuncionServicio(festival);
+        VentaServicio ventaServicio = new VentaServicio();
+        AbonoServicio abonoServicio = new AbonoServicio(funcionServicio, ventaServicio);
+        EvaluacionServicio evaluacionServicio = new EvaluacionServicio(peliculaServicio);
+
+        Persistencia persistencia = new Persistencia(Persistencia.CARPETA_DATOS, personaServicio, peliculaServicio, festivalServicio, funcionServicio, ventaServicio, abonoServicio, evaluacionServicio);
+
+        // CORRECCION P2: las lineas con errores se saltean y se muestran todas juntas. La aplicación abre igual.
 
         try {
             persistencia.cargar();
         } catch (PersistenciaException e) {
-            advertir("Advertencia al cargar datos", e.getMessage(), e.getErrores());
+            JOptionPane.showMessageDialog(null,
+                    e.getMessage() + "\n\n" + resumirErrores(e.getErrores())
+                            + "\n\nCarpeta de datos: " + persistencia.getCarpeta(),
+                    "Advertencia al cargar datos", JOptionPane.WARNING_MESSAGE);
         }
 
-        SistemaFestival sistema = new SistemaFestival(catalogo, reloj);
+        // CORRECCION P1: Antes si un archivo faltaba o no se podia inicializar no abria directamente el programa. Ahora, si la demo falla, se avisa y la aplicación abre igual
+
+        InicializadorDatos inicializador = new InicializadorDatos(personaServicio, peliculaServicio, festivalServicio,
+                funcionServicio, ventaServicio, abonoServicio, evaluacionServicio);
         try {
-            new InicializadorDatos(sistema, reloj).inicializar();
+            inicializador.inicializar();
         } catch (FestivalException e) {
-            advertir("Datos de demostración", "No se pudieron generar todos los datos de demostración.", List.of(e.getMessage()));
+            JOptionPane.showMessageDialog(null, "No se pudieron cargar todos los datos de ejemplo: " + e.getMessage(), "Advertencia", JOptionPane.WARNING_MESSAGE);
         }
 
-        SwingUtilities.invokeLater(() -> new VentanaPrincipal(sistema, persistencia).setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            VentanaPrincipal ventana = new VentanaPrincipal(personaServicio, peliculaServicio, festivalServicio, funcionServicio, ventaServicio, abonoServicio, evaluacionServicio, persistencia);
+            ventana.setVisible(true);
+        });
     }
 
-    private static void advertir(String titulo, String mensaje, List<String> errores) {
-        StringBuilder texto = new StringBuilder(mensaje);
-        errores.stream().limit(ERRORES_A_MOSTRAR).forEach(error -> texto.append("\n• ").append(error));
-        if (errores.size() > ERRORES_A_MOSTRAR) {
-            texto.append("\n… y ").append(errores.size() - ERRORES_A_MOSTRAR).append(" más.");
+    private static String resumirErrores(List<String> errores) {
+        StringBuilder texto = new StringBuilder();
+        for (int i = 0; i < errores.size() && i < MAXIMO_ERRORES_A_MOSTRAR; i++) {
+            texto.append("• ").append(errores.get(i)).append("\n");
         }
-        JOptionPane.showMessageDialog(null, texto.toString(), titulo, JOptionPane.WARNING_MESSAGE);
+        if (errores.size() > MAXIMO_ERRORES_A_MOSTRAR) {
+            texto.append("... y ").append(errores.size() - MAXIMO_ERRORES_A_MOSTRAR).append(" más.");
+        }
+        return texto.toString();
     }
 }
